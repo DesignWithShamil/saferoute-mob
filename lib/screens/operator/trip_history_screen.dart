@@ -3,9 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../app_services.dart';
 import '../../core/api/api_exception.dart';
-import '../../models/student.dart';
 import '../../models/trip.dart';
 import '../../widgets/state_views.dart';
+import 'trip_history_detail_screen.dart';
 
 /// React `/driver/history` and `/helper/history`.
 class TripHistoryScreen extends StatefulWidget {
@@ -19,9 +19,6 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
   List<Trip> _trips = const [];
   bool _loading = true;
   String? _error;
-  String? _openId;
-  List<AttendanceRecord>? _attendance;
-  bool _attendanceLoading = false;
 
   @override
   void initState() {
@@ -45,27 +42,10 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
     }
   }
 
-  Future<void> _toggle(Trip trip) async {
-    if (_openId == trip.publicId) {
-      setState(() {
-        _openId = null;
-        _attendance = null;
-      });
-      return;
-    }
-    setState(() {
-      _openId = trip.publicId;
-      _attendanceLoading = true;
-      _attendance = null;
-    });
-    try {
-      final rows = await context.read<AppServices>().attendance.forTrip(trip.publicId);
-      if (mounted) setState(() => _attendance = rows);
-    } catch (e) {
-      if (mounted) showSnack(context, describeError(e), error: true);
-    } finally {
-      if (mounted) setState(() => _attendanceLoading = false);
-    }
+  void _openTrip(Trip trip) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => TripHistoryDetailScreen(trip: trip)),
+    );
   }
 
   @override
@@ -88,42 +68,16 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
         itemCount: _trips.length,
         itemBuilder: (context, i) {
           final t = _trips[i];
-          final open = t.publicId == _openId;
           return Card(
             margin: const EdgeInsets.only(bottom: 10),
-            child: Column(
-              children: [
-                ListTile(
-                  title: Text('${t.routeName} · ${TripType.label(t.tripType)}'),
-                  subtitle: Text([
-                    if (t.date != null) t.date!,
-                    if (t.bus != null) 'Bus ${t.bus!.busNumber}',
-                  ].join(' · ')),
-                  trailing: StatusChip(label: TripStatus.label(t.status), color: AppColors.forStatus(t.status)),
-                  onTap: () => _toggle(t),
-                ),
-                if (open)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                    child: _attendanceLoading
-                        ? const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()))
-                        : Column(
-                            children: [
-                              if (_attendance == null || _attendance!.isEmpty)
-                                const Text('No attendance records for this trip.')
-                              else
-                                for (final r in _attendance!)
-                                  ListTile(
-                                    dense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                    title: Text(r.student.fullName),
-                                    subtitle: Text(r.stop?.name ?? ''),
-                                    trailing: StatusChip(label: AttendanceStatus.label(r.status), color: AppColors.forStatus(r.status)),
-                                  ),
-                            ],
-                          ),
-                  ),
-              ],
+            child: ListTile(
+              title: Text('${t.routeName} · ${TripType.label(t.tripType)}'),
+              subtitle: Text([
+                if (t.date != null) t.date!,
+                if (t.bus != null) 'Bus ${t.bus!.busNumber}',
+              ].join(' · ')),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _openTrip(t),
             ),
           );
         },

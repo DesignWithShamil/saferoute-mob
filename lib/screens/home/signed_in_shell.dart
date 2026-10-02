@@ -64,7 +64,11 @@ class _SignedInShellState extends State<SignedInShell> {
           if (_index == widget.alertsTabIndex) const MarkAllReadButton(),
         ],
       ),
-      body: IndexedStack(index: _index, children: [for (final t in widget.tabs) t.body]),
+      body: IndexedStack(
+        index: _index,
+        sizing: StackFit.expand,
+        children: [for (final t in widget.tabs) SizedBox.expand(child: t.body)],
+      ),
       bottomNavigationBar: widget.scrollableNavigation || widget.tabs.length > 5
           ? _ScrollableBottomNav(
               tabs: widget.tabs,

@@ -19,6 +19,9 @@ class MapStop {
     required this.status,
     this.isCurrent = false,
     this.isHighlighted = false,
+    this.isSchoolAnchor = false,
+    this.isRouteStart = false,
+    this.isRouteEnd = false,
     this.radiusMeters,
     this.badge,
     this.details = const [],
@@ -32,6 +35,11 @@ class MapStop {
 
   /// e.g. the parent's child's own stop.
   final bool isHighlighted;
+
+  /// Morning: last stop (school). Afternoon: first stop (school).
+  final bool isSchoolAnchor;
+  final bool isRouteStart;
+  final bool isRouteEnd;
   final int? radiusMeters;
 
   /// Text inside the marker; defaults to the sequence number.
@@ -378,12 +386,24 @@ class _StopMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final departed = stop.status == TripStopStatus.departed;
-    final Color fill = departed
-        ? AppColors.green
-        : stop.isCurrent
-            ? AppColors.amber
-            : const Color(0xFFDBEAFE);
-    final Color border = stop.isHighlighted ? Colors.purple : (departed || stop.isCurrent ? Colors.white : AppColors.brand);
+    final school = stop.isSchoolAnchor;
+    final Color fill = school
+        ? const Color(0xFF7C3AED)
+        : departed
+            ? AppColors.green
+            : stop.isCurrent
+                ? AppColors.amber
+                : stop.isRouteStart
+                    ? const Color(0xFF059669)
+                    : stop.isRouteEnd
+                        ? const Color(0xFF2563EB)
+                        : const Color(0xFFDBEAFE);
+    final Color border = stop.isHighlighted
+        ? Colors.purple
+        : (departed || stop.isCurrent || school ? Colors.white : AppColors.brand);
+    final textColor = departed || stop.isCurrent || school || stop.isRouteStart || stop.isRouteEnd
+        ? Colors.white
+        : AppColors.brand;
     return Container(
       alignment: Alignment.center,
       decoration: BoxDecoration(
@@ -392,14 +412,12 @@ class _StopMarker extends StatelessWidget {
         border: Border.all(color: border, width: stop.isHighlighted ? 4 : 3),
         boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black26)],
       ),
-      child: Text(
-        stop.badge ?? '${stop.sequence}',
-        style: TextStyle(
-          fontWeight: FontWeight.w800,
-          fontSize: 12,
-          color: departed || stop.isCurrent ? Colors.white : AppColors.brand,
-        ),
-      ),
+      child: school
+          ? Icon(Icons.school, size: 16, color: textColor)
+          : Text(
+              stop.badge ?? (stop.isRouteStart ? 'S' : stop.isRouteEnd ? 'E' : '${stop.sequence}'),
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: stop.badge != null && stop.badge!.length > 2 ? 10 : 12, color: textColor),
+            ),
     );
   }
 }
@@ -478,25 +496,43 @@ List<MapStop> mapStopsForTrip(
   Map<String, List<String>> studentsByStop = const {},
 }) {
   final currentId = trip.currentStop?.publicId;
-  return [
-    for (final ts in trip.tripStops)
-      if (ts.stop?.hasPosition ?? false)
-        MapStop(
-          position: LatLng(ts.stop!.latitude!, ts.stop!.longitude!),
-          sequence: ts.sequence,
-          name: ts.stop!.name,
-          status: ts.status,
-          isCurrent: ts.stop!.publicId == currentId,
-          radiusMeters: ts.stop!.radius,
-          badge: studentCounts[ts.stop!.publicId]?.toString(),
-          details: [
-            ?scheduledTimeLine(morning: trip.isMorning, pickupTime: ts.stop!.pickupTime, dropTime: ts.stop!.dropTime),
-            if (ts.stop!.address.isNotEmpty) ts.stop!.address,
-            if (ts.arrivedAt != null) 'Arrived ${DateFormat.jm().format(ts.arrivedAt!)}',
-            if (ts.departedAt != null) 'Departed ${DateFormat.jm().format(ts.departedAt!)}',
-            if ((studentsByStop[ts.stop!.publicId] ?? const []).isNotEmpty)
-              'Students: ${studentsByStop[ts.stop!.publicId]!.join(', ')}',
-          ],
-        ),
-  ];
+  final sequences = trip.tripStops.map((e) => e.sequence);
+  final maxSeq = sequences.isEmpty ? 0 : sequences.reduce((a, b) => a > b ? a : b);
+  final out = <MapStop>[];
+  for (final ts in trip.tripStops) {
+    if (!(ts.stop?.hasPosition ?? false)) continue;
+    final isFirst = ts.sequence == 1;
+    final isLast = ts.sequence == maxSeq;
+    final schoolAnchor = (trip.isMorning && isLast) || (trip.isAfternoon && isFirst);
+    final routeStart = trip.isMorning ? isFirst : schoolAnchor;
+    final routeEnd = trip.isMorning ? schoolAnchor : isLast;
+    final stopId = ts.stop!.publicId;
+    final count = studentCounts[stopId];
+    out.add(
+      MapStop(
+        position: LatLng(ts.stop!.latitude!, ts.stop!.longitude!),
+        sequence: ts.sequence,
+        name: ts.stop!.name,
+        status: ts.status,
+        isCurrent: stopId == currentId,
+        isSchoolAnchor: schoolAnchor,
+        isRouteStart: routeStart && !schoolAnchor,
+        isRouteEnd: routeEnd && !schoolAnchor,
+        radiusMeters: ts.stop!.radius,
+        badge: schoolAnchor ? null : (count != null && count > 0 ? '$count' : null),
+        details: [
+          if (schoolAnchor) 'School (${trip.isMorning ? 'morning drop-off' : 'evening pickup'})',
+          if (routeStart && !schoolAnchor) 'Route start',
+          if (routeEnd && !schoolAnchor) 'Route end',
+          ?scheduledTimeLine(morning: trip.isMorning, pickupTime: ts.stop!.pickupTime, dropTime: ts.stop!.dropTime),
+          if (count != null && count > 0) '$count student${count == 1 ? '' : 's'} at this stop',
+          if (ts.stop!.address.isNotEmpty) ts.stop!.address,
+          if (ts.arrivedAt != null) 'Arrived ${DateFormat.jm().format(ts.arrivedAt!)}',
+          if (ts.departedAt != null) 'Departed ${DateFormat.jm().format(ts.departedAt!)}',
+          if ((studentsByStop[stopId] ?? const []).isNotEmpty) 'Students: ${studentsByStop[stopId]!.join(', ')}',
+        ],
+      ),
+    );
+  }
+  return out;
 }

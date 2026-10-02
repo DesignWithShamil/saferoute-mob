@@ -71,25 +71,65 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SizedBox(height: 8),
                         Container(
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.all(18),
+                          padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
                           decoration: BoxDecoration(
-                            color: AppColors.brand.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(22),
+                            borderRadius: BorderRadius.circular(24),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                AppColors.brand.withValues(alpha: 0.92),
+                                const Color(0xFF1D4ED8),
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.brand.withValues(alpha: 0.35),
+                                blurRadius: 24,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
                           ),
-                          child: const Icon(Icons.directions_bus_rounded, size: 52, color: AppColors.brand),
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.directions_bus_rounded, size: 44, color: Colors.white),
+                              ),
+                              const SizedBox(height: 14),
+                              Text(
+                                'SafeRoute',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'School transport — safe every mile',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.9)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        Text(
+                          'Sign in as driver, helper, or parent',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(color: AppColors.slate, fontWeight: FontWeight.w500),
                         ),
                         const SizedBox(height: 16),
-                        Text('SafeRoute', textAlign: TextAlign.center, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5)),
-                        Text(
-                          'Driver · Helper · Parent',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.slate),
-                        ),
-                        const SizedBox(height: 28),
                         Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: AppColors.slate.withValues(alpha: 0.12))),
                           child: Padding(
                             padding: const EdgeInsets.all(20),
                             child: Column(
@@ -139,10 +179,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ],
                                 const SizedBox(height: 20),
                                 FilledButton(
+                                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                                   onPressed: _busy ? null : _submit,
                                   child: _busy
                                       ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white))
-                                      : const Text('Sign in'),
+                                      : const Text('Sign in', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                                 ),
                               ],
                             ),

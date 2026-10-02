@@ -20,8 +20,7 @@ class _ChildrenListScreenState extends State<ChildrenListScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final c = context.read<ParentController>();
-      if (c.children.isEmpty && !c.loading) c.load();
+      context.read<ParentController>().load();
     });
   }
 
@@ -31,10 +30,12 @@ class _ChildrenListScreenState extends State<ChildrenListScreen> {
     if (c.loading && c.children.isEmpty) return const LoadingView(label: 'Loading your children…');
     if (c.error != null && c.children.isEmpty) return ErrorView(message: c.error!, onRetry: c.load);
 
-    return RefreshIndicator(
-      onRefresh: c.load,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: c.load,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         children: [
           Row(
             children: [
@@ -83,6 +84,7 @@ class _ChildrenListScreenState extends State<ChildrenListScreen> {
                 ),
               ),
         ],
+        ),
       ),
     );
   }

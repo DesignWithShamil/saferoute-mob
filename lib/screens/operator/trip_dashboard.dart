@@ -14,6 +14,8 @@ import '../../widgets/state_views.dart';
 import '../../widgets/trip_map.dart';
 import 'attendance_roster.dart';
 import 'qr_scan_screen.dart';
+import 'trip_roster_screen.dart';
+import 'trip_stops_screen.dart';
 import 'trip_widgets.dart';
 
 /// Today's trip for a Driver or Helper. Which controls appear follows the
@@ -374,6 +376,7 @@ class _ActiveTrip extends StatelessWidget {
                     style: TextStyle(color: c.busLocation!.isStale ? AppColors.amber : AppColors.slate),
                   ),
                 ),
+              if (trip.status != TripStatus.started) _UpcomingStopsBar(trip: trip, roster: c.roster, controller: c),
               TripMap(
                 stops: mapStopsForTrip(
                   trip,
@@ -392,20 +395,76 @@ class _ActiveTrip extends StatelessWidget {
                   if (!isDriver && c.busLocation != null) 'Updated ${formatAge(c.busLocation!.age)}',
                 ],
               ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => ChangeNotifierProvider.value(value: c, child: const TripStopsScreen()),
+                      )),
+                      icon: const Icon(Icons.signpost_outlined, size: 20),
+                      label: const Text('All stops'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => ChangeNotifierProvider.value(value: c, child: const TripRosterScreen()),
+                      )),
+                      icon: const Icon(Icons.groups_outlined, size: 20),
+                      label: const Text('Full roster'),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
         if (started && trip.isAfternoon)
           SectionCard(
             title: 'Mark attendance (boarding at school)',
-            child: AttendanceRosterView(roster: c.roster),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AttendanceRosterView(roster: c.roster, showStats: true, groupByStop: false),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => ChangeNotifierProvider.value(value: c, child: const TripRosterScreen()),
+                  )),
+                  child: const Text('Open full roster'),
+                ),
+              ],
+            ),
           )
         else if (nextStop != null)
           _NextStopCard(trip: trip, busPosition: busPosition)
         else
           SectionCard(
             title: 'All stops completed · Trip summary',
-            child: AttendanceRosterView(roster: c.roster, isAfternoon: trip.isAfternoon, dropActions: true),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AttendanceRosterView(
+                  roster: c.roster,
+                  isAfternoon: trip.isAfternoon,
+                  dropActions: true,
+                  showStats: true,
+                  groupByStop: true,
+                  compactStats: true,
+                  actionsInDetail: true,
+                ),
+                const SizedBox(height: 8),
+                FilledButton.tonal(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => ChangeNotifierProvider.value(value: c, child: const TripRosterScreen()),
+                  )),
+                  child: const Text('View all students & actions'),
+                ),
+              ],
+            ),
           ),
         _TripControls(trip: trip),
         const SizedBox(height: 8),
@@ -415,14 +474,6 @@ class _ActiveTrip extends StatelessWidget {
           )),
           icon: const Icon(Icons.qr_code_scanner),
           label: const Text('Scan student QR'),
-        ),
-        const SizedBox(height: 8),
-        Card(
-          child: ExpansionTile(
-            title: Text('Stops (${trip.tripStops.length})'),
-            childrenPadding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [StopTimeline(trip: trip)],
-          ),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
@@ -460,20 +511,6 @@ class _ActiveTrip extends StatelessWidget {
     return counts;
   }
 
-  /// Students still waiting pickup/drop (optional summary).
-  static Map<String, int> _waitingCounts(Trip trip, List<AttendanceRecord> roster) {
-    final counts = <String, int>{};
-    for (final r in roster) {
-      final id = r.stop?.publicId;
-      if (id == null) continue;
-      if (r.status == AttendanceStatus.onLeave || r.status == AttendanceStatus.absent) continue;
-      if (trip.isMorning && r.status == AttendanceStatus.boarded) continue;
-      if (!trip.isMorning && r.status == AttendanceStatus.dropped) continue;
-      counts[id] = (counts[id] ?? 0) + 1;
-    }
-    return counts;
-  }
-
   static Map<String, List<String>> _studentsByStop(List<AttendanceRecord> roster) {
     final names = <String, List<String>>{};
     for (final r in roster) {
@@ -482,6 +519,80 @@ class _ActiveTrip extends StatelessWidget {
       names.putIfAbsent(id, () => []).add('${r.student.fullName} (${AttendanceStatus.label(r.status)})');
     }
     return names;
+  }
+}
+
+class _UpcomingStopsBar extends StatelessWidget {
+  const _UpcomingStopsBar({required this.trip, required this.roster, required this.controller});
+  final Trip trip;
+  final List<AttendanceRecord> roster;
+  final OperatorTripController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final counts = _ActiveTrip._studentsPerStop(roster);
+    final upcoming = trip.tripStops.where((ts) => ts.status != TripStopStatus.departed).take(5).toList();
+    if (upcoming.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Upcoming stops', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              const Spacer(),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => ChangeNotifierProvider.value(value: controller, child: const TripStopsScreen()),
+                )),
+                child: const Text('See all'),
+              ),
+            ],
+          ),
+          SizedBox(
+            height: 72,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: upcoming.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, i) {
+                final ts = upcoming[i];
+                final name = ts.stop?.name ?? 'Stop ${ts.sequence}';
+                final n = counts[ts.stop?.publicId ?? ''] ?? 0;
+                final isNext = ts.stop?.publicId == trip.currentStop?.publicId;
+                return Material(
+                  color: isNext ? AppColors.amber.withValues(alpha: 0.15) : AppColors.slate.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => ChangeNotifierProvider.value(value: controller, child: const TripStopsScreen()),
+                    )),
+                    child: Container(
+                      width: 132,
+                      padding: const EdgeInsets.all(10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            isNext ? 'Next' : '#${ts.sequence}',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isNext ? AppColors.amber : AppColors.slate),
+                          ),
+                          Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, height: 1.2)),
+                          Text('$n child${n == 1 ? '' : 'ren'}', style: Theme.of(context).textTheme.labelSmall),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -513,13 +624,13 @@ class _NextStopCard extends StatelessWidget {
         children: [
           Text(stop.name, style: Theme.of(context).textTheme.titleLarge),
           if (stop.address.isNotEmpty) Text(stop.address, style: Theme.of(context).textTheme.bodySmall),
-          const Divider(height: 24),
-          AttendanceRosterView(
-            roster: c.rosterAtCurrentStop,
-            isAfternoon: trip.isAfternoon,
-            dropActions: true,
-            groupByStop: false,
-            showStats: false,
+          const SizedBox(height: 12),
+          FilledButton.tonalIcon(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => ChangeNotifierProvider.value(value: c, child: const TripRosterScreen()),
+            )),
+            icon: const Icon(Icons.groups_outlined),
+            label: Text(n > 0 ? 'View $n student${n == 1 ? '' : 's'} at this stop' : 'Open student roster'),
           ),
         ],
       ),
