@@ -8,6 +8,7 @@ import 'core/navigation/deep_link_router.dart';
 import 'core/storage/token_storage.dart';
 import 'repositories/attendance_repository.dart';
 import 'repositories/auth_repository.dart';
+import 'repositories/messaging_repository.dart';
 import 'repositories/notification_repository.dart';
 import 'repositories/transport_repository.dart';
 import 'repositories/trip_repository.dart';
@@ -23,6 +24,7 @@ class AppServices {
     required this.attendance,
     required this.transport,
     required this.notifications,
+    required this.messaging,
     required this.notificationService,
     required this.gps,
     required this.location,
@@ -40,6 +42,7 @@ class AppServices {
   final AttendanceRepository attendance;
   final TransportRepository transport;
   final NotificationRepository notifications;
+  final MessagingRepository messaging;
   final NotificationService notificationService;
   final GpsTrackingService gps;
   final LocationService location;
@@ -56,6 +59,7 @@ class AppServices {
     final sessionExpired = ValueNotifier<int>(0);
     final api = ApiClient(storage: storage, onSessionExpired: () async => sessionExpired.value++);
     final notifications = NotificationRepository(api);
+    final messaging = MessagingRepository(api);
     final navigatorKey = GlobalKey<NavigatorState>();
     return AppServices._(
       storage: storage,
@@ -65,6 +69,7 @@ class AppServices {
       attendance: AttendanceRepository(api),
       transport: TransportRepository(api),
       notifications: notifications,
+      messaging: messaging,
       notificationService: NotificationService(repository: notifications, storage: storage),
       gps: GpsTrackingService(),
       location: LocationService(),

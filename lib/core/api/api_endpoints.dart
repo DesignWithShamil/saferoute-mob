@@ -53,4 +53,10 @@ class ApiEndpoints {
   static const notificationsClearAll = '/notifications/clear-all/';
   static const devices = '/notifications/devices/';
   static const notificationPreferences = '/notifications/preferences/';
+
+  static const messagingConversations = '/messaging/conversations/';
+  static const messagingConversationsEnsure = '/messaging/conversations/ensure/';
+  static const messagingUnreadCount = '/messaging/conversations/unread-count/';
+  static String messagingConversationMessages(String id) => '/messaging/conversations/$id/messages/';
+  static String messagingConversationClearInbox(String id) => '/messaging/conversations/$id/clear-inbox/';
 }

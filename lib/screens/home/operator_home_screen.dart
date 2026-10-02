@@ -8,6 +8,7 @@ import '../notifications/preferences_screen.dart';
 import '../operator/boarding_screen.dart';
 import '../operator/operator_route_map_screen.dart';
 import '../operator/sos_screen.dart';
+import '../operator/staff_messages_screen.dart';
 import '../operator/students_roster_screen.dart';
 import '../operator/trip_dashboard.dart';
 import '../operator/trip_history_screen.dart';
@@ -65,6 +66,7 @@ class OperatorHomeScreen extends StatelessWidget {
       const ShellTab(label: 'History', icon: Icons.history, body: TripHistoryScreen()),
       const ShellTab(label: 'Route map', icon: Icons.map_outlined, body: OperatorRouteMapScreen()),
       const ShellTab(label: 'Students', icon: Icons.groups_outlined, body: StudentsRosterScreen()),
+      const ShellTab(label: 'Announcements', title: 'School messages', icon: Icons.campaign_outlined, body: StaffMessagesScreen()),
       alertsTab,
       const ShellTab(label: 'SOS', icon: Icons.sos, body: SosScreen()),
     ];
