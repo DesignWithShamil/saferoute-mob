@@ -175,6 +175,7 @@ class AuthController extends ChangeNotifier {
     await _s.gps.stop();
     await _s.notificationService.onSigningOut();
     await _s.auth.logout();
+    _s.navigatorKey.currentState?.popUntil((route) => route.isFirst);
     _setSignedOut();
   }
 

@@ -56,6 +56,11 @@ class TripRepository {
 
   Future<Trip> advanceStop(String tripId) => _action(tripId, 'advance-stop');
 
+  Future<Map<String, dynamic>> notifyDelay(String tripId, {String message = ''}) async {
+    final data = await _api.post(ApiEndpoints.tripAction(tripId, 'notify-delay'), data: {'message': message});
+    return asMap(data);
+  }
+
   Future<Trip> _action(String tripId, String action, [Map<String, dynamic>? body]) async =>
       Trip.fromJson(asMap(await _api.post(ApiEndpoints.tripAction(tripId, action), data: body)));
 

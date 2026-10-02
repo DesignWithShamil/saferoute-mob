@@ -17,8 +17,22 @@ import '../parent/parent_widgets.dart';
 import '../profile/profile_screen.dart';
 import 'signed_in_shell.dart';
 
-class ParentHomeScreen extends StatelessWidget {
+class ParentHomeScreen extends StatefulWidget {
   const ParentHomeScreen({super.key});
+
+  @override
+  State<ParentHomeScreen> createState() => _ParentHomeScreenState();
+}
+
+class _ParentHomeScreenState extends State<ParentHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<ParentController>().load();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +156,7 @@ class _HomeTabState extends State<_HomeTab> with WidgetsBindingObserver {
     return RefreshIndicator(
       onRefresh: c.load,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         children: [
           const SelectedChildHeader(),
           if (c.liveError != null)

@@ -106,20 +106,28 @@ class _NotificationsListState extends State<NotificationsList> {
         ? null
         : Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: Wrap(
-              spacing: 8,
-              children: [
-                ChoiceChip(
-                  label: Text(parent.selectedChild?.label ?? 'Selected child'),
-                  selected: !c.showAllChildren,
-                  onSelected: (_) => c.setShowAllChildren(false),
-                ),
-                ChoiceChip(
-                  label: const Text('All children'),
-                  selected: c.showAllChildren,
-                  onSelected: (_) => c.setShowAllChildren(true),
-                ),
-              ],
+            child: SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: parent.children.length + 1,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, i) {
+                  if (i == parent.children.length) {
+                    return ChoiceChip(
+                      label: const Text('All children'),
+                      selected: c.showAllChildren,
+                      onSelected: (_) => c.setShowAllChildren(true),
+                    );
+                  }
+                  final child = parent.children[i];
+                  return ChoiceChip(
+                    label: Text(child.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    selected: !c.showAllChildren && c.studentFilter == child.student.publicId,
+                    onSelected: (_) => c.filterByChild(child.student.publicId),
+                  );
+                },
+              ),
             ),
           );
 

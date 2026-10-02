@@ -252,6 +252,14 @@ class OperatorTripController extends ChangeNotifier {
 
   Future<String?> advanceStop() => _tripAction((id) => _s.trips.advanceStop(id));
 
+  Future<String?> notifyDelay(String message) async {
+    final id = trip?.publicId;
+    if (id == null) return 'No trip loaded.';
+    return _act(() async {
+      await _s.trips.notifyDelay(id, message: message);
+    });
+  }
+
   Future<String?> _tripAction(Future<Trip> Function(String tripId) call) {
     final id = trip?.publicId;
     if (id == null) return Future.value('No trip loaded.');

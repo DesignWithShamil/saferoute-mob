@@ -7,8 +7,23 @@ import 'add_child_screen.dart';
 import 'child_detail_screen.dart';
 
 /// React `/parent/profile` "My Children": every linked child, add, and details.
-class ChildrenListScreen extends StatelessWidget {
+class ChildrenListScreen extends StatefulWidget {
   const ChildrenListScreen({super.key});
+
+  @override
+  State<ChildrenListScreen> createState() => _ChildrenListScreenState();
+}
+
+class _ChildrenListScreenState extends State<ChildrenListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final c = context.read<ParentController>();
+      if (c.children.isEmpty && !c.loading) c.load();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +34,7 @@ class ChildrenListScreen extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: c.load,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         children: [
           Row(
             children: [

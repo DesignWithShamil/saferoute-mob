@@ -55,7 +55,7 @@ class _SignedInShellState extends State<SignedInShell> {
     final unread = context.select<NotificationsController, int>((c) => c.unread);
     final tab = widget.tabs[_index];
     return Scaffold(
-      extendBody: true,
+      extendBody: false,
       appBar: AppBar(
         title: Text(tab.title ?? tab.label),
         actions: [

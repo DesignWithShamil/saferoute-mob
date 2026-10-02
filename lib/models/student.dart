@@ -137,8 +137,8 @@ class ParentLink {
   /// Only present when the child's school allows parents to contact the crew.
   final List<TransportContact> contacts;
 
-  /// "Rahul - ABC School", the label used for the child everywhere.
-  String get label => school.name.isEmpty ? student.fullName : '${student.fullName} - ${school.name}';
+  /// Child's display name in pickers (school is shown separately when needed).
+  String get label => student.fullName;
 
   factory ParentLink.fromJson(Map<String, dynamic> json) {
     final contacts = asMap(json['transport_contacts']);

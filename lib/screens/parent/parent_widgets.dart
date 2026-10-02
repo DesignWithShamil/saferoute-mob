@@ -144,30 +144,61 @@ class SelectedChildHeader extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       color: AppColors.brand.withValues(alpha: 0.06),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-        child: Row(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(child: Text(child.student.fullName.characters.firstOrNull ?? '?')),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Selected child', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.slate)),
-                  Text(child.label, style: theme.textTheme.titleMedium, key: const Key('selected-child-label')),
-                  Text(
-                    [
-                      if (child.student.classLabel.isNotEmpty) 'Class ${child.student.classLabel}',
-                      bus == null ? 'No bus assigned' : 'Bus $bus',
-                    ].join(' · '),
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
+            if (c.children.length > 1) ...[
+              Text('Select child', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.slate)),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: c.children.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) {
+                    final link = c.children[i];
+                    final selected = link.student.publicId == child.student.publicId;
+                    return ChoiceChip(
+                      label: Text(
+                        link.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      selected: selected,
+                      onSelected: (_) => c.selectChild(link.student.publicId),
+                    );
+                  },
+                ),
               ),
-            ),
-            TextButton(
-              onPressed: () => showChildPicker(context),
-              child: Text(c.children.length > 1 ? 'Change child' : 'Add child'),
+              const SizedBox(height: 12),
+            ],
+            Row(
+              children: [
+                CircleAvatar(child: Text(child.student.fullName.characters.firstOrNull ?? '?')),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Viewing', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.slate)),
+                      Text(child.label, style: theme.textTheme.titleMedium, key: const Key('selected-child-label')),
+                      Text(
+                        [
+                          if (child.student.classLabel.isNotEmpty) 'Class ${child.student.classLabel}',
+                          bus == null ? 'No bus assigned' : 'Bus $bus',
+                        ].join(' · '),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => showChildPicker(context),
+                  child: Text(c.children.length > 1 ? 'More' : 'Add child'),
+                ),
+              ],
             ),
           ],
         ),

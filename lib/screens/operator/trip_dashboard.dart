@@ -425,6 +425,19 @@ class _ActiveTrip extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.amber,
+            side: const BorderSide(color: AppColors.amber),
+            minimumSize: const Size.fromHeight(48),
+          ),
+          onPressed: c.acting ? null : () => _showDelayDialog(context, c, trip),
+          icon: const Icon(Icons.schedule),
+          label: Text(
+            trip.isMorning ? 'Send delay alert (not picked up)' : 'Send delay alert (not dropped)',
+          ),
+        ),
+        const SizedBox(height: 8),
         FilledButton.icon(
           style: FilledButton.styleFrom(backgroundColor: AppColors.red, minimumSize: const Size.fromHeight(52)),
           onPressed: c.acting ? null : () => showSosFlow(context),
@@ -632,5 +645,47 @@ class _TripControls extends StatelessWidget {
       icon: const Icon(Icons.flag),
       label: const Text('END TRIP', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
     );
+  }
+}
+
+Future<void> _showDelayDialog(BuildContext context, OperatorTripController c, Trip trip) async {
+  final controller = TextEditingController();
+  final sent = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Bus delay alert'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            trip.isMorning
+                ? 'Parents of students not yet picked up will be notified.'
+                : 'Parents of students not yet dropped will be notified.',
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: controller,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Optional message',
+              hintText: 'e.g. Traffic delay — about 15 minutes late.',
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send alert')),
+      ],
+    ),
+  );
+  try {
+    if (sent != true || !context.mounted) return;
+    final err = await c.notifyDelay(controller.text.trim());
+    if (!context.mounted) return;
+    showSnack(context, err ?? 'Delay alert sent to waiting parents.', error: err != null);
+  } finally {
+    controller.dispose();
   }
 }

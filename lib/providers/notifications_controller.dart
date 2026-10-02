@@ -30,10 +30,15 @@ class NotificationsController extends ChangeNotifier {
     await load();
   }
 
-  void setShowAllChildren(bool value) {
-    if (value == showAllChildren) return;
+  Future<void> setShowAllChildren(bool value, {String? selectedChildId}) async {
+    if (value == showAllChildren && (value || studentFilter == selectedChildId)) return;
     showAllChildren = value;
-    notifyListeners();
+    await setStudentFilter(value ? null : selectedChildId);
+  }
+
+  Future<void> filterByChild(String studentId) async {
+    showAllChildren = false;
+    await setStudentFilter(studentId);
   }
 
   Future<void> load() async {
