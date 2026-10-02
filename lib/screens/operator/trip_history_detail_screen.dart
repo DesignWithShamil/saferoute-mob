@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_services.dart';
+import '../../core/api/api_exception.dart';
 import '../../models/student.dart';
 import '../../models/trip.dart';
 import '../../widgets/state_views.dart';
