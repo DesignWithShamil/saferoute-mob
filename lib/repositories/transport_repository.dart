@@ -64,6 +64,9 @@ class TransportRepository {
     return rows.whereType<Map>().map((e) => Student.fromJson(asMap(e))).toList();
   }
 
+  Future<Student> studentDetail(String publicId) async =>
+      Student.fromJson(asMap(await _api.get(ApiEndpoints.student(publicId))));
+
   Future<StudentLookup?> lookupStudent(String query) async {
     final data = await _api.get(ApiEndpoints.studentLookup, query: {'q': query.trim()});
     if (data is! Map || data.isEmpty) return null;

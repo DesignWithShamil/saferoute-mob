@@ -52,7 +52,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
           ),
         ],
       ),
-      const ShellTab(label: 'Children', icon: Icons.family_restroom, body: ChildrenListScreen()),
+      const ShellTab(label: 'Children', title: 'My children', icon: Icons.family_restroom, body: ChildrenListScreen()),
       const ShellTab(label: 'Attendance', icon: Icons.fact_check_outlined, body: ParentAttendanceScreen()),
       const ShellTab(label: 'Leaves', icon: Icons.event_busy_outlined, body: ParentLeavesScreen()),
       const ShellTab(label: 'Route', icon: Icons.map_outlined, body: ParentRouteMapScreen()),

@@ -3,6 +3,27 @@ import 'transport.dart';
 import 'user.dart';
 
 /// StudentMiniSerializer.
+class StudentParentLink {
+  const StudentParentLink({
+    this.fullName = '',
+    this.phone = '',
+    this.email = '',
+    this.relation = '',
+  });
+
+  final String fullName;
+  final String phone;
+  final String email;
+  final String relation;
+
+  factory StudentParentLink.fromJson(Map<String, dynamic> json) => StudentParentLink(
+        fullName: asString(json['full_name']) ?? '',
+        phone: asString(json['phone']) ?? '',
+        email: asString(json['email']) ?? '',
+        relation: asString(json['relation']) ?? '',
+      );
+}
+
 class PrimaryParentContact {
   const PrimaryParentContact({this.fullName = '', this.phone = '', this.email = ''});
   final String fullName;
@@ -39,6 +60,10 @@ class Student {
     this.emergencyContactPhone = '',
     this.ageYears,
     this.primaryParent,
+    this.parents = const [],
+    this.assignedDriver,
+    this.assignedHelper,
+    this.medicalInfo = '',
   });
 
   final String publicId;
@@ -58,6 +83,10 @@ class Student {
   final String emergencyContactPhone;
   final int? ageYears;
   final PrimaryParentContact? primaryParent;
+  final List<StudentParentLink> parents;
+  final PersonRef? assignedDriver;
+  final PersonRef? assignedHelper;
+  final String medicalInfo;
 
   String get classLabel => section.isEmpty ? className : '$className-$section';
 
@@ -79,6 +108,10 @@ class Student {
         emergencyContactPhone: asString(json['emergency_contact_phone']) ?? '',
         ageYears: json['age_years'] is int ? json['age_years'] as int : int.tryParse('${json['age_years']}'),
         primaryParent: PrimaryParentContact.fromJsonOrNull(json['primary_parent']),
+        parents: asList(json['parents'], StudentParentLink.fromJson),
+        assignedDriver: PersonRef.fromJsonOrNull(json['assigned_driver']),
+        assignedHelper: PersonRef.fromJsonOrNull(json['assigned_helper']),
+        medicalInfo: asString(json['medical_info']) ?? '',
       );
 }
 

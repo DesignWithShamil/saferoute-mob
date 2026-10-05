@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../app_services.dart';
 import '../../core/api/api_exception.dart';
 import '../../models/student.dart';
-import '../../models/transport.dart';
 import '../../models/trip.dart';
 import '../../providers/parent_controller.dart';
 import '../../widgets/state_views.dart';
@@ -12,6 +12,7 @@ import '../../widgets/trip_map.dart';
 import 'live_trip_screen.dart';
 import 'parent_leaves_screen.dart';
 import 'parent_route_map_screen.dart';
+import '../shared/student_detail_views.dart';
 import 'parent_widgets.dart';
 
 /// One linked child: transport assignment, any live trip, and recent
@@ -28,15 +29,25 @@ class ChildDetailScreen extends StatefulWidget {
 class _ChildDetailScreenState extends State<ChildDetailScreen> {
   late final ParentController _c = context.read<ParentController>();
   late Future<List<AttendanceRecord>> _history = _c.attendanceHistory(widget.studentId);
+  ParentLink? _detailLink;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (_c.children.isEmpty) await _c.load();
-      // Opening a child (also from a notification) makes it the selected child.
       await _c.selectChild(widget.studentId);
+      await _refreshDetail();
     });
+  }
+
+  Future<void> _refreshDetail() async {
+    try {
+      final link = await context.read<AppServices>().transport.childDetail(widget.studentId);
+      if (mounted) setState(() => _detailLink = link);
+    } catch (_) {
+      // Fall back to list payload from ParentController.
+    }
   }
 
   Future<void> _unlink(ParentLink link) async {
@@ -61,13 +72,17 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
 
   Future<void> _refresh() async {
     setState(() => _history = _c.attendanceHistory(widget.studentId));
-    await Future.wait([_c.load(), _history.catchError((_) => <AttendanceRecord>[])]);
+    await Future.wait([
+      _c.load(),
+      _refreshDetail(),
+      _history.catchError((_) => <AttendanceRecord>[]),
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.watch<ParentController>();
-    final link = c.childById(widget.studentId);
+    final link = _detailLink ?? c.childById(widget.studentId);
 
     if (link == null) {
       return Scaffold(
@@ -130,26 +145,42 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
                   builder: (_) => LiveTripScreen(tripId: l.tripId, studentId: s.publicId),
                 )),
               ),
+            if (places.isNotEmpty)
+              SectionCard(
+                title: 'Map',
+                child: TripMap(places: places, followBusByDefault: false, heightFraction: 0.28),
+              ),
+            const SizedBox(height: 12),
+            TransportLegSection(
+              title: 'Morning pickup',
+              icon: Icons.wb_sunny_outlined,
+              bus: s.pickupBus,
+              stop: s.pickupStop,
+              routeName: link.pickupRoute?.name,
+              routeStops: link.pickupRoute?.stops,
+            ),
+            const SizedBox(height: 12),
+            TransportLegSection(
+              title: 'Evening drop',
+              icon: Icons.nights_stay_outlined,
+              bus: s.dropBus,
+              stop: s.dropStop,
+              routeName: link.dropRoute?.name,
+              routeStops: link.dropRoute?.stops,
+            ),
             SectionCard(
-              title: 'Transport',
+              title: 'Bus crew contacts',
               child: Column(
                 children: [
-                  if (places.isNotEmpty) ...[
-                    TripMap(places: places, followBusByDefault: false, heightFraction: 0.28),
-                    const SizedBox(height: 8),
-                  ],
-                  _AssignmentTile(title: 'Morning pickup', icon: Icons.wb_sunny_outlined, bus: s.pickupBus, stop: s.pickupStop, time: s.pickupStop?.pickupTime, route: link.pickupRoute),
-                  const Divider(),
-                  _AssignmentTile(title: 'Evening drop', icon: Icons.nights_stay_outlined, bus: s.dropBus, stop: s.dropStop, time: s.dropStop?.dropTime, route: link.dropRoute),
-                  for (final contact in link.contacts) ...[
-                    const Divider(),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.badge_outlined),
-                      title: Text(contact.label),
-                      subtitle: Text([contact.fullName, if (contact.phone.isNotEmpty) contact.phone].join(' · ')),
-                    ),
-                  ],
+                  if (link.contacts.isEmpty) const Text('Contact details are not shared by this school.')
+                  else
+                    for (final contact in link.contacts)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.badge_outlined),
+                        title: Text(contact.label),
+                        subtitle: Text([contact.fullName, if (contact.phone.isNotEmpty) contact.phone].join(' · ')),
+                      ),
                   if (s.requiresDropVerification) ...[
                     const Divider(),
                     const ListTile(
@@ -162,6 +193,7 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
                 ],
               ),
             ),
+            ParentsSection(student: s),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -230,34 +262,3 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
   }
 }
 
-class _AssignmentTile extends StatelessWidget {
-  const _AssignmentTile({required this.title, required this.icon, this.bus, this.stop, this.time, this.route});
-  final String title;
-  final IconData icon;
-  final BusRef? bus;
-  final StopRef? stop;
-  final String? time;
-  final ChildRoute? route;
-
-  @override
-  Widget build(BuildContext context) => ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: Icon(icon),
-        title: Text(title),
-        subtitle: Text(stop == null && bus == null
-            ? 'Not assigned'
-            : [
-                if (bus != null) 'Bus ${bus!.busNumber}',
-                if (route != null) route!.name,
-                if (stop != null) stop!.name,
-                if (time != null && time!.isNotEmpty) _time(time!),
-              ].join(' · ')),
-      );
-
-  static String _time(String hhmmss) {
-    final parts = hhmmss.split(':');
-    if (parts.length < 2) return hhmmss;
-    final dt = DateTime(2000, 1, 1, int.tryParse(parts[0]) ?? 0, int.tryParse(parts[1]) ?? 0);
-    return DateFormat.jm().format(dt);
-  }
-}

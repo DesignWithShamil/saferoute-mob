@@ -8,6 +8,7 @@ import '../../models/student.dart';
 import '../../models/transport.dart';
 import '../../providers/operator_trip_controller.dart';
 import '../../widgets/state_views.dart';
+import 'operator_student_detail_screen.dart';
 import 'qr_capture_screen.dart';
 import 'qr_scan_screen.dart';
 
@@ -158,6 +159,10 @@ class _StudentsRosterScreenState extends State<StudentsRosterScreen> {
                   if (_lookup!.afternoonBus != null) 'Evening ${_lookup!.afternoonBus} · ${_lookup!.afternoonStop ?? ''}',
                 ].join('\n')),
                 isThreeLine: true,
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => OperatorStudentDetailScreen(studentId: _lookup!.publicId),
+                )),
               ),
             ),
           const SizedBox(height: 12),
@@ -174,15 +179,21 @@ class _StudentsRosterScreenState extends State<StudentsRosterScreen> {
           const SizedBox(height: 8),
           Text('${filtered.length} students', style: Theme.of(context).textTheme.titleSmall),
           for (final s in filtered)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(child: Text(s.fullName.characters.firstOrNull ?? '?')),
-              title: Text(s.fullName),
-              subtitle: Text([
-                if (s.classLabel.isNotEmpty) 'Class ${s.classLabel}',
-                if (s.pickupBus != null) 'Bus ${s.pickupBus!.busNumber}',
-                if (s.pickupStop != null) s.pickupStop!.name,
-              ].join(' · ')),
+            Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: CircleAvatar(child: Text(s.fullName.characters.firstOrNull ?? '?')),
+                title: Text(s.fullName),
+                subtitle: Text([
+                  if (s.classLabel.isNotEmpty) 'Class ${s.classLabel}',
+                  if (s.pickupBus != null) 'Bus ${s.pickupBus!.busNumber}',
+                  if (s.pickupStop != null) s.pickupStop!.name,
+                ].join(' · ')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => OperatorStudentDetailScreen(studentId: s.publicId, initial: s),
+                )),
+              ),
             ),
         ],
       ),

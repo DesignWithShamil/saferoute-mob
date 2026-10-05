@@ -37,6 +37,7 @@ class ApiEndpoints {
 
   static const students = '/students/';
   static const studentLookup = '/students/lookup/';
+  static String student(String publicId) => '/students/$publicId/';
 
   static const parentChildren = '/parent/children/';
   static const parentChildLink = '/parent/children/link/';
