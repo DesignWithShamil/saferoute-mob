@@ -49,7 +49,7 @@ class StudentHeaderCard extends StatelessWidget {
               ],
             ),
           ),
-          if (trailing != null) trailing!,
+          trailing?,
         ],
       ),
     );

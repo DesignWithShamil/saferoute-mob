@@ -231,7 +231,7 @@ class _FilterBar extends StatelessWidget {
             SizedBox(
               width: 160,
               child: DropdownButtonFormField<String>(
-                value: targetType,
+                initialValue: targetType,
                 decoration: const InputDecoration(
                   labelText: 'Type',
                   isDense: true,

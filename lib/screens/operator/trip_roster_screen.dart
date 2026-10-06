@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '../../models/trip.dart';
 import '../../providers/operator_trip_controller.dart';
 import 'attendance_roster.dart';
 

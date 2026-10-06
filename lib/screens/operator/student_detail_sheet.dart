@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../models/student.dart';
-import '../../models/transport.dart';
 import 'operator_student_detail_screen.dart';
 
 /// Opens full student detail (driver/helper roster, attendance, map).
