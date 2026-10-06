@@ -3,7 +3,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// JWTs live only in the platform keystore/keychain, never in plain prefs.
 /// Shared by the UI isolate and the GPS background-service isolate.
 class TokenStorage {
-  TokenStorage([FlutterSecureStorage? storage]) : _storage = storage ?? const FlutterSecureStorage();
+  TokenStorage([FlutterSecureStorage? storage])
+      : _storage = storage ?? const FlutterSecureStorage(aOptions: AndroidOptions(encryptedSharedPreferences: true));
 
   static const _accessKey = 'saferoute_access_token';
   static const _refreshKey = 'saferoute_refresh_token';
