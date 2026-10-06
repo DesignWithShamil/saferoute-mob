@@ -35,7 +35,15 @@ class ParentController extends ChangeNotifier {
     return childById(_selectedId ?? '') ?? children.first;
   }
 
-  Future<void> load() async {
+  Future<void>? _loadFuture;
+
+  Future<void> load() {
+    if (_loadFuture != null) return _loadFuture!;
+    _loadFuture = _doLoad();
+    return _loadFuture!.whenComplete(() => _loadFuture = null);
+  }
+
+  Future<void> _doLoad() async {
     loading = true;
     error = null;
     notifyListeners();
