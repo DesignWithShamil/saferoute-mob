@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import '../core/api/api_endpoints.dart';
 import '../core/config/env.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
