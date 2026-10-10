@@ -13,6 +13,7 @@ import 'repositories/notification_repository.dart';
 import 'repositories/transport_repository.dart';
 import 'repositories/trip_repository.dart';
 import 'services/route_geometry_service.dart';
+import 'services/websocket_service.dart';
 
 /// Composition root: one instance of each service, wired once in main().
 class AppServices {
@@ -33,6 +34,7 @@ class AppServices {
     required this.navigatorKey,
     required this.messengerKey,
     required this.sessionExpired,
+    required this.webSocket,
   });
 
   final TokenStorage storage;
@@ -50,6 +52,7 @@ class AppServices {
   final DeepLinkRouter deepLinks;
   final GlobalKey<NavigatorState> navigatorKey;
   final GlobalKey<ScaffoldMessengerState> messengerKey;
+  final WebSocketService webSocket;
 
   /// Fired by the API layer when the refresh token is rejected.
   final ValueNotifier<int> sessionExpired;
@@ -61,6 +64,7 @@ class AppServices {
     final notifications = NotificationRepository(api);
     final messaging = MessagingRepository(api);
     final navigatorKey = GlobalKey<NavigatorState>();
+    final webSocket = WebSocketService();
     return AppServices._(
       storage: storage,
       api: api,
@@ -78,6 +82,7 @@ class AppServices {
       navigatorKey: navigatorKey,
       messengerKey: GlobalKey<ScaffoldMessengerState>(),
       sessionExpired: sessionExpired,
+      webSocket: webSocket,
     );
   }
 }

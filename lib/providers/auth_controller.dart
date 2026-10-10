@@ -185,6 +185,7 @@ class AuthController extends ChangeNotifier {
     school = null;
     status = AuthStatus.signedIn;
     _s.deepLinks.attachUser(me);
+    _s.webSocket.connect();
     notifyListeners();
     if (me.isSupportedOnMobile) {
       try {
@@ -209,6 +210,7 @@ class AuthController extends ChangeNotifier {
     if (!keepMessage) message = null;
     status = AuthStatus.signedOut;
     _s.deepLinks.attachUser(null);
+    _s.webSocket.disconnect();
     for (final hook in _signOutHooks) {
       hook();
     }

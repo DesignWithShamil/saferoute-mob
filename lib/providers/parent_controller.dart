@@ -14,7 +14,9 @@ import '../models/student.dart';
 /// Selecting a child is only a view choice; the backend checks every request
 /// against the parent's own links.
 class ParentController extends ChangeNotifier {
-  ParentController(this._s);
+  ParentController(this._s) {
+    _setupWs();
+  }
 
   final AppServices _s;
   Timer? _poll;
@@ -135,15 +137,53 @@ class ParentController extends ChangeNotifier {
   /// Reference-counted so the home tab and an open live screen share one timer.
   void startPolling() {
     _pollUsers++;
-    _poll ??= Timer.periodic(pollInterval, (_) => refreshLive());
+    // Polling removed in favour of WebSocket events.
   }
 
   void stopPolling() {
     if (_pollUsers > 0) _pollUsers--;
-    if (_pollUsers == 0) {
-      _poll?.cancel();
-      _poll = null;
+  }
+
+  void _onWsEvent(Map<String, dynamic> data) {
+    if (_pollUsers > 0) {
+      if (data.containsKey('latitude') && data.containsKey('longitude') && data.containsKey('bus_id')) {
+        final tripId = data['trip_id'] as String?;
+        if (tripId != null) {
+          bool updated = false;
+          final newLocation = BusLocation.fromJsonOrNull(data);
+          for (int i = 0; i < live.length; i++) {
+            if (live[i].tripId == tripId) {
+              live[i] = live[i].copyWithLocation(newLocation);
+              updated = true;
+            }
+          }
+          if (updated) {
+            liveUpdatedAt = DateTime.now();
+            notifyListeners();
+          }
+        }
+        return;
+      }
+      refreshLive();
     }
+  }
+
+  void _setupWs() {
+    _s.webSocket.subscribe('trip.started', _onWsEvent);
+    _s.webSocket.subscribe('trip.ended', _onWsEvent);
+    _s.webSocket.subscribe('trip.stop.updated', _onWsEvent);
+    _s.webSocket.subscribe('route.updated', _onWsEvent);
+    _s.webSocket.subscribe('attendance.updated', _onWsEvent);
+    _s.webSocket.subscribe('bus.location.updated', _onWsEvent);
+  }
+
+  void _teardownWs() {
+    _s.webSocket.unsubscribe('trip.started', _onWsEvent);
+    _s.webSocket.unsubscribe('trip.ended', _onWsEvent);
+    _s.webSocket.unsubscribe('trip.stop.updated', _onWsEvent);
+    _s.webSocket.unsubscribe('route.updated', _onWsEvent);
+    _s.webSocket.unsubscribe('attendance.updated', _onWsEvent);
+    _s.webSocket.unsubscribe('bus.location.updated', _onWsEvent);
   }
 
   ParentLink? childById(String studentId) {
@@ -226,6 +266,7 @@ class ParentController extends ChangeNotifier {
   @override
   void dispose() {
     _poll?.cancel();
+    _teardownWs();
     super.dispose();
   }
 }

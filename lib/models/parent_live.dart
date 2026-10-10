@@ -119,4 +119,24 @@ class ParentLiveTrip {
       location: BusLocation.fromJsonOrNull(json['location']),
     );
   }
+
+  ParentLiveTrip copyWithLocation(BusLocation? newLocation) {
+    return ParentLiveTrip(
+      childId: childId,
+      childName: childName,
+      childStatus: childStatus,
+      childStopId: childStopId,
+      schoolName: schoolName,
+      tripType: tripType,
+      tripId: tripId,
+      tripStatus: tripStatus,
+      busNumber: busNumber,
+      routeName: routeName,
+      currentStopName: currentStopName,
+      startedAt: startedAt,
+      endedAt: endedAt,
+      stops: stops,
+      location: newLocation,
+    );
+  }
 }

@@ -20,6 +20,7 @@ import '../services/route_geometry_service.dart';
 class OperatorTripController extends ChangeNotifier {
   OperatorTripController(this._s) {
     _gpsSub = _s.gps.statusStream.listen(_onGpsStatus);
+    _setupWs();
   }
 
   final AppServices _s;
@@ -157,13 +158,44 @@ class OperatorTripController extends ChangeNotifier {
   }
 
   void _restartPolling() {
-    _poll?.cancel();
-    if (hasActiveTrip) _poll = Timer.periodic(pollInterval, (_) => refresh());
+    // Polling removed in favour of WebSocket events.
   }
 
-  void pausePolling() => _poll?.cancel();
-  void resumePolling() {
-    if (_user != null) refresh();
+  void pausePolling() {}
+  void resumePolling() {}
+
+  void _onWsEvent(Map<String, dynamic> data) {
+    if (_user == null) return;
+    
+    // We can infer the event type from the payload keys, but better to let the service pass it if needed.
+    // However, for bus.location.updated, we check if it has latitude.
+    if (data.containsKey('latitude') && data.containsKey('longitude') && data.containsKey('bus_id')) {
+      if (trip?.publicId == data['trip_id'] && !isDriver) {
+        busLocation = BusLocation.fromJsonOrNull(data);
+        notifyListeners();
+      }
+      return;
+    }
+    
+    refresh();
+  }
+
+  void _setupWs() {
+    _s.webSocket.subscribe('trip.started', _onWsEvent);
+    _s.webSocket.subscribe('trip.ended', _onWsEvent);
+    _s.webSocket.subscribe('trip.stop.updated', _onWsEvent);
+    _s.webSocket.subscribe('route.updated', _onWsEvent);
+    _s.webSocket.subscribe('attendance.updated', _onWsEvent);
+    _s.webSocket.subscribe('bus.location.updated', _onWsEvent);
+  }
+
+  void _teardownWs() {
+    _s.webSocket.unsubscribe('trip.started', _onWsEvent);
+    _s.webSocket.unsubscribe('trip.ended', _onWsEvent);
+    _s.webSocket.unsubscribe('trip.stop.updated', _onWsEvent);
+    _s.webSocket.unsubscribe('route.updated', _onWsEvent);
+    _s.webSocket.unsubscribe('attendance.updated', _onWsEvent);
+    _s.webSocket.unsubscribe('bus.location.updated', _onWsEvent);
   }
 
   // ---------------------------------------------------------------------------
@@ -322,6 +354,7 @@ class OperatorTripController extends ChangeNotifier {
   void dispose() {
     _poll?.cancel();
     _gpsSub?.cancel();
+    _teardownWs();
     super.dispose();
   }
 }
