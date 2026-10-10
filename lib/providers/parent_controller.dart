@@ -7,6 +7,7 @@ import '../core/api/api_exception.dart';
 import '../models/leave.dart';
 import '../models/parent_live.dart';
 import '../models/student.dart';
+import '../models/transport.dart';
 
 /// Parent data: the parent's children across schools (`/parent/children/`),
 /// which child is selected, and that child's live trips

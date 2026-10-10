@@ -52,4 +52,12 @@ class Env {
 
   /// WebSocket/host root derived from the API base, e.g. `http://host:8000`.
   static String get serverRoot => apiBaseUrl.replaceFirst(RegExp(r'/api/?$'), '');
+
+  /// WebSocket base URL, replacing http/https with ws/wss.
+  static String get wsBaseUrl {
+    final root = serverRoot;
+    if (root.startsWith('https://')) return root.replaceFirst('https://', 'wss://');
+    if (root.startsWith('http://')) return root.replaceFirst('http://', 'ws://');
+    return root;
+  }
 }
