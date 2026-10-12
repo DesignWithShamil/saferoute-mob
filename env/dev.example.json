@@ -1,5 +1,5 @@
 {
-  "API_BASE_URL": "http://10.0.2.2:8000/api",
+  "API_BASE_URL": "http://127.0.0.1:8000/api",
   "OSRM_BASE_URL": "https://router.project-osrm.org",
   "MAP_TILE_URL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
   "FIREBASE_API_KEY": "",
