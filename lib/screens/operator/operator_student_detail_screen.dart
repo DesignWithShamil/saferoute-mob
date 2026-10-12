@@ -89,7 +89,7 @@ class _OperatorStudentDetailScreenState extends State<OperatorStudentDetailScree
                             const Padding(
                               padding: EdgeInsets.only(bottom: 12),
                               child: Card(
-                                color: Color(0xFFFFF8E1),
+                                color: Color(0xFFFFF4DB),
                                 child: ListTile(
                                   leading: Icon(Icons.pin_outlined, color: AppColors.amber),
                                   title: Text('Drop requires parent PIN'),

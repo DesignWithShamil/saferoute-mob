@@ -71,9 +71,9 @@ class LiveTripSummaryCard extends StatelessWidget {
     final approach = approachText(live, live.childStop);
     final loc = live.location;
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 14),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(22),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -141,8 +141,8 @@ class SelectedChildHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final bus = child.student.pickupBus?.busNumber ?? child.student.dropBus?.busNumber;
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      color: AppColors.brand.withValues(alpha: 0.06),
+      margin: const EdgeInsets.only(bottom: 14),
+      color: const Color(0xFFEAF0FF),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         child: Column(

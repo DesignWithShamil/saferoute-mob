@@ -269,7 +269,7 @@ class _AnnouncementsHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.brand, Color(0xFF1D4ED8)],
+          colors: [AppColors.ink, AppColors.brandDeep, AppColors.brand],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -353,7 +353,7 @@ class _AnnouncementCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.slate.withValues(alpha: 0.12)),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),

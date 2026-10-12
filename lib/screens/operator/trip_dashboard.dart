@@ -248,11 +248,21 @@ class _TripButtonShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
-    return Material(
-      color: enabled ? color : color.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(14),
+    return Ink(
+      decoration: BoxDecoration(
+        gradient: enabled
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [color, Color.lerp(color, AppColors.ink, 0.35)!],
+              )
+            : null,
+        color: enabled ? null : color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: enabled ? [BoxShadow(color: color.withValues(alpha: 0.30), blurRadius: 16, offset: const Offset(0, 8))] : null,
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -562,10 +572,13 @@ class _UpcomingStopsBar extends StatelessWidget {
                 final n = counts[ts.stop?.publicId ?? ''] ?? 0;
                 final isNext = ts.stop?.publicId == trip.currentStop?.publicId;
                 return Material(
-                  color: isNext ? AppColors.amber.withValues(alpha: 0.15) : AppColors.slate.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(12),
+                  color: isNext ? AppColors.amber.withValues(alpha: 0.15) : Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    side: BorderSide(color: isNext ? AppColors.amber.withValues(alpha: 0.5) : AppColors.border),
+                  ),
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(18),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => ChangeNotifierProvider.value(value: controller, child: const TripStopsScreen()),
                     )),
@@ -712,7 +725,7 @@ class _TripControls extends StatelessWidget {
           if (c.settings.enableAutoDetect)
             Container(
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: AppColors.slate.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: AppColors.slate.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(16)),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

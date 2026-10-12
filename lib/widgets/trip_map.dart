@@ -192,7 +192,7 @@ class _TripMapState extends State<TripMap> {
     final current = widget.stops.where((s) => s.isCurrent).firstOrNull;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(20),
       child: SizedBox(
         height: height,
         child: Stack(
@@ -217,7 +217,7 @@ class _TripMapState extends State<TripMap> {
                   if (remaining.length > 1)
                     Polyline(
                       points: remaining,
-                      color: fallback ? AppColors.slate : const Color(0xFF3B82F6),
+                      color: fallback ? AppColors.slate : AppColors.brand,
                       strokeWidth: fallback ? 3 : 4,
                       pattern: fallback
                           ? StrokePattern.dashed(segments: const [10, 8])
@@ -394,9 +394,9 @@ class _StopMarker extends StatelessWidget {
             : stop.isCurrent
                 ? AppColors.amber
                 : stop.isRouteStart
-                    ? const Color(0xFF059669)
+                    ? AppColors.green
                     : stop.isRouteEnd
-                        ? const Color(0xFF2563EB)
+                        ? AppColors.brand
                         : const Color(0xFFDBEAFE);
     final Color border = stop.isHighlighted
         ? Colors.purple

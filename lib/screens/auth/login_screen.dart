@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFEEF4FF), Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
+            colors: [Color(0xFFE6EDFF), AppColors.bg, Color(0xFFF7F8FC)],
           ),
         ),
         child: SafeArea(
@@ -74,13 +74,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         Container(
                           padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.circular(32),
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                AppColors.brand.withValues(alpha: 0.92),
-                                const Color(0xFF1D4ED8),
+                                AppColors.ink,
+                                Color(0xFF1B2A6B),
+                                AppColors.brand,
                               ],
                             ),
                             boxShadow: [
@@ -129,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                         Card(
                           elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: AppColors.slate.withValues(alpha: 0.12))),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26), side: const BorderSide(color: AppColors.border)),
                           child: Padding(
                             padding: const EdgeInsets.all(20),
                             child: Column(
@@ -179,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ],
                                 const SizedBox(height: 20),
                                 FilledButton(
-                                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
                                   onPressed: _busy ? null : _submit,
                                   child: _busy
                                       ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white))
