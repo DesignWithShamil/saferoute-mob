@@ -8,13 +8,28 @@ import '../../providers/notifications_controller.dart';
 import '../../providers/parent_controller.dart';
 import '../../widgets/state_views.dart';
 
+import 'preferences_screen.dart';
+
 /// Stand-alone route (from a notification tap).
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Notifications'), actions: const [ClearAllNotificationsButton(), MarkAllReadButton()]),
+        appBar: AppBar(
+          title: const Text('Notifications'),
+          actions: [
+            IconButton(
+              tooltip: 'Preferences',
+              icon: const Icon(Icons.tune),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const NotificationPreferencesScreen()),
+              ),
+            ),
+            const ClearAllNotificationsButton(),
+            const MarkAllReadButton(),
+          ],
+        ),
         body: const NotificationsList(),
       );
 }
@@ -73,6 +88,8 @@ class NotificationsList extends StatefulWidget {
 }
 
 class _NotificationsListState extends State<NotificationsList> {
+  String _typeFilter = 'ALL'; // 'ALL' | 'ALERTS' | 'ANNOUNCEMENTS'
+
   @override
   void initState() {
     super.initState();
@@ -91,6 +108,18 @@ class _NotificationsListState extends State<NotificationsList> {
     return parent.selectedChild?.student.publicId;
   }
 
+  bool _isAnnouncement(AppNotification n) {
+    final t = n.type.toUpperCase();
+    final title = n.title.toLowerCase();
+    final msg = n.message.toLowerCase();
+    return t == 'STAFF_MESSAGE' ||
+        t == 'HOLIDAY_NOTICE' ||
+        title.contains('announcement') ||
+        msg.contains('announcement') ||
+        title.contains('broadcast') ||
+        msg.contains('broadcast');
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.watch<NotificationsController>();
@@ -102,10 +131,35 @@ class _NotificationsListState extends State<NotificationsList> {
       });
     }
 
+    final typeFilterBar = Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Row(
+        children: [
+          ChoiceChip(
+            label: const Text('All'),
+            selected: _typeFilter == 'ALL',
+            onSelected: (_) => setState(() => _typeFilter = 'ALL'),
+          ),
+          const SizedBox(width: 8),
+          ChoiceChip(
+            label: const Text('🔔 Alerts'),
+            selected: _typeFilter == 'ALERTS',
+            onSelected: (_) => setState(() => _typeFilter = 'ALERTS'),
+          ),
+          const SizedBox(width: 8),
+          ChoiceChip(
+            label: const Text('📢 Announcements'),
+            selected: _typeFilter == 'ANNOUNCEMENTS',
+            onSelected: (_) => setState(() => _typeFilter = 'ANNOUNCEMENTS'),
+          ),
+        ],
+      ),
+    );
+
     final filterBar = parent.children.length < 2
         ? null
         : Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
             child: SizedBox(
               height: 40,
               child: ListView.separated(
@@ -131,17 +185,28 @@ class _NotificationsListState extends State<NotificationsList> {
             ),
           );
 
+    final displayedItems = c.items.where((n) {
+      if (_typeFilter == 'ANNOUNCEMENTS') return _isAnnouncement(n);
+      if (_typeFilter == 'ALERTS') return !_isAnnouncement(n);
+      return true;
+    }).toList();
+
     Widget body;
     if (c.loading && c.items.isEmpty) {
       body = const LoadingView();
     } else if (c.error != null && c.items.isEmpty) {
       body = ErrorView(message: c.error!, onRetry: c.load);
-    } else if (c.items.isEmpty) {
+    } else if (c.items.isEmpty || displayedItems.isEmpty) {
+      final emptyTitle = _typeFilter == 'ANNOUNCEMENTS'
+          ? 'No announcements yet'
+          : _typeFilter == 'ALERTS'
+              ? 'No alerts yet'
+              : 'No notifications yet';
       body = RefreshIndicator(
         onRefresh: c.load,
-        child: ListView(children: const [
-          SizedBox(height: 120),
-          EmptyView(icon: Icons.notifications_none, title: 'No notifications yet'),
+        child: ListView(children: [
+          const SizedBox(height: 120),
+          EmptyView(icon: Icons.notifications_none, title: emptyTitle),
         ]),
       );
     } else {
@@ -153,21 +218,26 @@ class _NotificationsListState extends State<NotificationsList> {
             return false;
           },
           child: ListView.separated(
-            itemCount: c.items.length + (c.hasMore ? 1 : 0),
+            itemCount: displayedItems.length + (c.hasMore ? 1 : 0),
             separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (context, i) {
-              if (i >= c.items.length) {
+              if (i >= displayedItems.length) {
                 return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
               }
-              return _NotificationTile(item: c.items[i]);
+              return _NotificationTile(item: displayedItems[i]);
             },
           ),
         ),
       );
     }
 
-    if (filterBar == null) return body;
-    return Column(children: [filterBar, Expanded(child: body)]);
+    return Column(
+      children: [
+        typeFilterBar,
+        ?filterBar,
+        Expanded(child: body),
+      ],
+    );
   }
 }
 

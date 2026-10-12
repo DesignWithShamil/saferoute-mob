@@ -4,19 +4,18 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_controller.dart';
 import '../../providers/operator_trip_controller.dart';
 import '../notifications/notifications_screen.dart';
-import '../notifications/preferences_screen.dart';
 import '../operator/boarding_screen.dart';
 import '../operator/operator_route_map_screen.dart';
 import '../operator/sos_screen.dart';
-import '../operator/staff_messages_screen.dart';
 import '../operator/students_roster_screen.dart';
 import '../operator/trip_dashboard.dart';
 import '../operator/trip_history_screen.dart';
 import '../profile/profile_screen.dart';
 import 'signed_in_shell.dart';
 
-/// Home for DRIVER and HELPER. Bottom destinations match React
-/// `DRIVER_BOTTOM_NAV` / `HELPER_BOTTOM_NAV` in navigation.js.
+/// Home for DRIVER and HELPER.
+/// Bottom navigation: exactly 4 items (Trip, Boarding, Students, Route map).
+/// Secondary items (History, Alerts, SOS, Profile) are in the sidebar / drawer.
 class OperatorHomeScreen extends StatelessWidget {
   const OperatorHomeScreen({super.key});
 
@@ -40,20 +39,6 @@ class OperatorHomeScreen extends StatelessWidget {
       ),
     ];
 
-    final alertsTab = ShellTab(
-      label: 'Alerts',
-      title: 'Notifications',
-      icon: Icons.notifications_outlined,
-      body: const NotificationsList(),
-      actions: [
-        IconButton(
-          tooltip: 'Preferences',
-          icon: const Icon(Icons.tune),
-          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationPreferencesScreen())),
-        ),
-      ],
-    );
-
     final tabs = <ShellTab>[
       ShellTab(
         label: 'Trip',
@@ -63,20 +48,50 @@ class OperatorHomeScreen extends StatelessWidget {
         actions: tripActions,
       ),
       const ShellTab(label: 'Boarding', icon: Icons.checklist, body: BoardingScreen()),
-      const ShellTab(label: 'History', icon: Icons.history, body: TripHistoryScreen()),
-      const ShellTab(label: 'Route map', icon: Icons.map_outlined, body: OperatorRouteMapScreen()),
       const ShellTab(label: 'Students', icon: Icons.groups_outlined, body: StudentsRosterScreen()),
-      const ShellTab(label: 'Announcements', title: 'School messages', icon: Icons.campaign_outlined, body: StaffMessagesScreen()),
-      alertsTab,
-      const ShellTab(label: 'SOS', icon: Icons.sos, body: SosScreen()),
+      const ShellTab(label: 'Route map', icon: Icons.map_outlined, body: OperatorRouteMapScreen()),
     ];
 
-    final alertsIndex = tabs.indexWhere((t) => t.label == 'Alerts');
+    final drawerItems = <ShellDrawerItem>[
+      const ShellDrawerItem(label: 'Trip', icon: Icons.directions_bus_outlined, tabIndex: 0),
+      const ShellDrawerItem(label: 'Boarding', icon: Icons.checklist, tabIndex: 1),
+      const ShellDrawerItem(label: 'Students', icon: Icons.groups_outlined, tabIndex: 2),
+      const ShellDrawerItem(label: 'Route map', icon: Icons.map_outlined, tabIndex: 3),
+      ShellDrawerItem(
+        label: 'Trip history',
+        icon: Icons.history,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => Scaffold(appBar: AppBar(title: const Text('Trip History')), body: const TripHistoryScreen()),
+        )),
+      ),
+      ShellDrawerItem(
+        label: 'Alerts',
+        icon: Icons.notifications_outlined,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => const NotificationsScreen(),
+        )),
+      ),
+      ShellDrawerItem(
+        label: 'Emergency SOS',
+        icon: Icons.sos,
+        isDestructive: true,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => Scaffold(appBar: AppBar(title: const Text('Emergency SOS')), body: const SosScreen()),
+        )),
+      ),
+      ShellDrawerItem(
+        label: 'Profile',
+        icon: Icons.person_outline,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => Scaffold(appBar: AppBar(title: const Text('Profile')), body: const ProfileView()),
+        )),
+      ),
+    ];
 
     return SignedInShell(
-      scrollableNavigation: true,
-      alertsTabIndex: alertsIndex >= 0 ? alertsIndex : null,
+      scrollableNavigation: false,
       tabs: tabs,
+      drawerItems: drawerItems,
     );
   }
 }

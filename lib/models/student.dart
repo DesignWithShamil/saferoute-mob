@@ -170,8 +170,8 @@ class ParentLink {
   /// Only present when the child's school allows parents to contact the crew.
   final List<TransportContact> contacts;
 
-  /// Child's display name in pickers (school is shown separately when needed).
-  String get label => student.fullName;
+  /// Child's display name in pickers (shows school when available).
+  String get label => school.name.isEmpty ? student.fullName : '${student.fullName} - ${school.name}';
 
   factory ParentLink.fromJson(Map<String, dynamic> json) {
     final contacts = asMap(json['transport_contacts']);

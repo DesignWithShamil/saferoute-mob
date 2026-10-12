@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_services.dart';
+import '../../providers/auth_controller.dart';
 import '../../providers/notifications_controller.dart';
 import '../notifications/notifications_screen.dart';
 
@@ -14,17 +15,37 @@ class ShellTab {
   final List<Widget> actions;
 }
 
+class ShellDrawerItem {
+  const ShellDrawerItem({
+    required this.label,
+    required this.icon,
+    this.tabIndex,
+    this.badgeCount,
+    this.onTap,
+    this.isDestructive = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final int? tabIndex;
+  final int? badgeCount;
+  final VoidCallback? onTap;
+  final bool isDestructive;
+}
+
 /// Bottom-navigation scaffold shared by the role homes. On first build it
 /// runs the post-sign-in notification setup (permission + FCM token).
 class SignedInShell extends StatefulWidget {
   const SignedInShell({
     super.key,
     required this.tabs,
+    this.drawerItems = const [],
     this.alertsTabIndex,
     this.scrollableNavigation = false,
   });
 
   final List<ShellTab> tabs;
+  final List<ShellDrawerItem> drawerItems;
   final int? alertsTabIndex;
 
   /// When true (or when there are more than five tabs), use a horizontal
@@ -64,6 +85,7 @@ class _SignedInShellState extends State<SignedInShell> {
           if (_index == widget.alertsTabIndex) const MarkAllReadButton(),
         ],
       ),
+      drawer: widget.drawerItems.isNotEmpty ? _buildDrawer(context, unread) : null,
       body: IndexedStack(
         index: _index,
         sizing: StackFit.expand,
@@ -90,6 +112,195 @@ class _SignedInShellState extends State<SignedInShell> {
                   ),
               ],
             ),
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context, int unreadCount) {
+    final auth = context.watch<AuthController>();
+    final user = auth.user;
+    final school = auth.school;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    String roleDisplay = 'User';
+    if (user != null) {
+      if (user.isDriver) {
+        roleDisplay = 'Driver';
+      } else if (user.isHelper) {
+        roleDisplay = 'Helper';
+      } else if (user.isParent) {
+        roleDisplay = 'Parent';
+      } else {
+        roleDisplay = user.role.replaceAll('_', ' ');
+      }
+    }
+
+    final initial = (user?.fullName.isNotEmpty == true)
+        ? user!.fullName.characters.first.toUpperCase()
+        : '?';
+
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Drawer Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5))),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 26,
+                    backgroundColor: scheme.primaryContainer,
+                    child: Text(
+                      initial,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: scheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user?.fullName ?? 'SafeRoute',
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: scheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            roleDisplay,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: scheme.primary,
+                            ),
+                          ),
+                        ),
+                        if (school != null) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            school.name,
+                            style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Navigation Items
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: [
+                  for (final item in widget.drawerItems)
+                    _buildDrawerTile(context, item, unreadCount),
+                ],
+              ),
+            ),
+
+            // Logout & footer
+            Divider(height: 1, color: scheme.outlineVariant.withValues(alpha: 0.5)),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.redAccent),
+              title: const Text('Log out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
+              onTap: () async {
+                Navigator.of(context).pop();
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Log out'),
+                    content: const Text('Are you sure you want to log out?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                      FilledButton(
+                        style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Log out'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true && context.mounted) {
+                  await auth.logout();
+                }
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8, top: 4),
+              child: Text(
+                'SafeRoute © ${DateTime.now().year}',
+                style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerTile(BuildContext context, ShellDrawerItem item, int unreadCount) {
+    final isSelected = item.tabIndex != null && item.tabIndex == _index;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    Widget? badge;
+    final effectiveBadge = item.badgeCount ?? (item.label.toLowerCase().contains('alert') ? unreadCount : null);
+    if (effectiveBadge != null && effectiveBadge > 0) {
+      badge = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: scheme.error,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          '$effectiveBadge',
+          style: TextStyle(color: scheme.onError, fontSize: 11, fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+
+    return ListTile(
+      selected: isSelected,
+      selectedTileColor: scheme.primaryContainer.withValues(alpha: 0.4),
+      leading: Icon(
+        item.icon,
+        color: isSelected ? scheme.primary : (item.isDestructive ? scheme.error : scheme.onSurfaceVariant),
+      ),
+      title: Text(
+        item.label,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          color: isSelected ? scheme.primary : (item.isDestructive ? scheme.error : null),
+        ),
+      ),
+      trailing: badge,
+      onTap: () {
+        Navigator.of(context).pop();
+        if (item.tabIndex != null) {
+          _selectTab(item.tabIndex!);
+        } else if (item.onTap != null) {
+          item.onTap!();
+        }
+      },
     );
   }
 

@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../providers/parent_controller.dart';
 import '../../widgets/state_views.dart';
 import '../notifications/notifications_screen.dart';
-import '../notifications/preferences_screen.dart';
 import '../parent/add_child_screen.dart';
 import '../parent/child_detail_screen.dart';
 import '../parent/children_list_screen.dart';
@@ -52,30 +51,50 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
           ),
         ],
       ),
-      const ShellTab(label: 'Children', title: 'My children', icon: Icons.family_restroom, body: ChildrenListScreen()),
       const ShellTab(label: 'Attendance', icon: Icons.fact_check_outlined, body: ParentAttendanceScreen()),
-      const ShellTab(label: 'Leaves', icon: Icons.event_busy_outlined, body: ParentLeavesScreen()),
+      const ShellTab(label: 'Leave', icon: Icons.event_busy_outlined, body: ParentLeavesScreen()),
       const ShellTab(label: 'Route', icon: Icons.map_outlined, body: ParentRouteMapScreen()),
-      const ShellTab(label: 'Fees', icon: Icons.credit_card_outlined, body: ParentFeesScreen()),
-      ShellTab(
+    ];
+
+    final drawerItems = <ShellDrawerItem>[
+      const ShellDrawerItem(label: 'Home', icon: Icons.home_outlined, tabIndex: 0),
+      const ShellDrawerItem(label: 'Attendance', icon: Icons.fact_check_outlined, tabIndex: 1),
+      const ShellDrawerItem(label: 'Leave', icon: Icons.event_busy_outlined, tabIndex: 2),
+      const ShellDrawerItem(label: 'Route', icon: Icons.map_outlined, tabIndex: 3),
+      ShellDrawerItem(
+        label: 'My children',
+        icon: Icons.family_restroom,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => Scaffold(appBar: AppBar(title: const Text('My children')), body: const ChildrenListScreen()),
+        )),
+      ),
+      ShellDrawerItem(
+        label: 'Fees',
+        icon: Icons.credit_card_outlined,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => Scaffold(appBar: AppBar(title: const Text('Fees')), body: const ParentFeesScreen()),
+        )),
+      ),
+      ShellDrawerItem(
         label: 'Alerts',
-        title: 'Notifications',
         icon: Icons.notifications_outlined,
-        body: const NotificationsList(),
-        actions: [
-          IconButton(
-            tooltip: 'Preferences',
-            icon: const Icon(Icons.tune),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationPreferencesScreen())),
-          ),
-        ],
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => const NotificationsScreen(),
+        )),
+      ),
+      ShellDrawerItem(
+        label: 'Profile',
+        icon: Icons.person_outline,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => Scaffold(appBar: AppBar(title: const Text('Profile')), body: const ProfileView()),
+        )),
       ),
     ];
-    final alertsIndex = tabs.indexWhere((t) => t.label == 'Alerts');
+
     return SignedInShell(
-      scrollableNavigation: true,
-      alertsTabIndex: alertsIndex >= 0 ? alertsIndex : null,
+      scrollableNavigation: false,
       tabs: tabs,
+      drawerItems: drawerItems,
     );
   }
 }
