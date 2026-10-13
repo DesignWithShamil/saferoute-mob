@@ -7,6 +7,7 @@ import '../../core/api/api_exception.dart';
 import '../../models/student.dart';
 import '../../models/trip.dart';
 import '../../providers/parent_controller.dart';
+import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 import '../../widgets/trip_map.dart';
 import 'live_trip_screen.dart';
@@ -111,46 +112,76 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
           children: [
-            SectionCard(
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    child: Text(s.fullName.isEmpty ? '?' : s.fullName.characters.first, style: const TextStyle(fontSize: 22)),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(s.fullName, style: Theme.of(context).textTheme.titleLarge),
-                        Text(link.school.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                        Text([
-                          if (s.classLabel.isNotEmpty) 'Class ${s.classLabel}',
-                          if (s.admissionNumber.isNotEmpty) 'Adm. ${s.admissionNumber}',
-                          if (link.relation.isNotEmpty) link.relation,
-                        ].join(' · ')),
-                      ],
+            SrFadeIn(
+              child: SectionCard(
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: AppColors.brand.withValues(alpha: 0.12),
+                      child: Text(
+                        s.fullName.isEmpty ? '?' : s.fullName.characters.first.toUpperCase(),
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.brand),
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            s.fullName,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.ink, letterSpacing: -0.3),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            link.school.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            [
+                              if (s.classLabel.isNotEmpty) 'Class ${s.classLabel}',
+                              if (s.admissionNumber.isNotEmpty) 'Adm. ${s.admissionNumber}',
+                              if (link.relation.isNotEmpty) link.relation,
+                            ].join(' · '),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12, color: AppColors.slate),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             for (final l in live)
-              LiveTripSummaryCard(
-                live: l,
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => LiveTripScreen(tripId: l.tripId, studentId: s.publicId),
-                )),
+              SrFadeIn(
+                delay: const Duration(milliseconds: 70),
+                child: LiveTripSummaryCard(
+                  live: l,
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => LiveTripScreen(tripId: l.tripId, studentId: s.publicId),
+                  )),
+                ),
               ),
             if (places.isNotEmpty)
-              SectionCard(
-                title: 'Map',
-                child: TripMap(places: places, followBusByDefault: false, heightFraction: 0.28),
+              SrFadeIn(
+                delay: const Duration(milliseconds: 110),
+                child: SectionCard(
+                  title: 'Map',
+                  child: TripMap(places: places, followBusByDefault: false, heightFraction: 0.28),
+                ),
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 2),
             TransportLegSection(
               title: 'Morning pickup',
               icon: Icons.wb_sunny_outlined,
@@ -159,7 +190,7 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
               routeName: link.pickupRoute?.name,
               routeStops: link.pickupRoute?.stops,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             TransportLegSection(
               title: 'Evening drop',
               icon: Icons.nights_stay_outlined,
@@ -168,54 +199,73 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
               routeName: link.dropRoute?.name,
               routeStops: link.dropRoute?.stops,
             ),
-            SectionCard(
+            const SizedBox(height: 14),
+            SrFadeIn(
+              delay: const Duration(milliseconds: 150),
+              child: SectionCard(
               title: 'Bus crew contacts',
               child: Column(
                 children: [
-                  if (link.contacts.isEmpty) const Text('Contact details are not shared by this school.')
+                  if (link.contacts.isEmpty)
+                    const Text('Contact details are not shared by this school.', style: TextStyle(fontSize: 14, color: AppColors.slate))
                   else
                     for (final contact in link.contacts)
                       ListTile(
+                        minVerticalPadding: 8,
                         contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.badge_outlined),
-                        title: Text(contact.label),
-                        subtitle: Text([contact.fullName, if (contact.phone.isNotEmpty) contact.phone].join(' · ')),
+                        leading: const Icon(Icons.badge_outlined, color: AppColors.brand),
+                        title: Text(contact.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink)),
+                        subtitle: Text(
+                          [contact.fullName, if (contact.phone.isNotEmpty) contact.phone].join(' · '),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12, color: AppColors.slate),
+                        ),
                       ),
                   if (s.requiresDropVerification) ...[
-                    const Divider(),
+                    const Divider(color: AppColors.border),
                     const ListTile(
+                      minVerticalPadding: 8,
                       contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.pin_outlined),
-                      title: Text('Drop needs PIN verification'),
-                      subtitle: Text('Give the drop PIN to the driver or helper at drop-off.'),
+                      leading: Icon(Icons.pin_outlined, color: AppColors.amber),
+                      title: Text('Drop needs PIN verification', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink)),
+                      subtitle: Text('Give the drop PIN to the driver or helper at drop-off.', style: TextStyle(fontSize: 12, color: AppColors.slate)),
                     ),
                   ],
                 ],
               ),
             ),
+            ),
             ParentsSection(student: s),
+            const SizedBox(height: 2),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 ActionChip(
-                  avatar: const Icon(Icons.map_outlined, size: 18),
-                  label: const Text('Route map'),
+                  materialTapTargetSize: MaterialTapTargetSize.padded,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.border)),
+                  avatar: const Icon(Icons.map_outlined, size: 18, color: AppColors.brand),
+                  label: const Text('Route map', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink)),
                   onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => Scaffold(appBar: AppBar(title: const Text('Route map')), body: const ParentRouteMapScreen()),
                   )),
                 ),
                 ActionChip(
-                  avatar: const Icon(Icons.event_busy_outlined, size: 18),
-                  label: const Text('Leaves'),
+                  materialTapTargetSize: MaterialTapTargetSize.padded,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.border)),
+                  avatar: const Icon(Icons.event_busy_outlined, size: 18, color: AppColors.brand),
+                  label: const Text('Leaves', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink)),
                   onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => Scaffold(appBar: AppBar(title: const Text('Leaves')), body: const ParentLeavesScreen()),
                   )),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            SectionCard(
+            const SizedBox(height: 16),
+            SrFadeIn(
+              delay: const Duration(milliseconds: 190),
+              child: SectionCard(
               title: 'Recent attendance',
               child: FutureBuilder<List<AttendanceRecord>>(
                 future: _history,
@@ -224,31 +274,59 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
                     return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
                   }
                   if (snap.hasError) {
-                    return Text(describeError(snap.error!), style: const TextStyle(color: AppColors.red));
+                    return Text(describeError(snap.error!), style: const TextStyle(color: AppColors.red, fontSize: 14));
                   }
                   final rows = snap.data!;
-                  if (rows.isEmpty) return const Text('No attendance records yet.');
+                  if (rows.isEmpty) return const Text('No attendance records yet.', style: TextStyle(fontSize: 14, color: AppColors.slate));
                   return Column(
                     children: [
-                      for (final r in rows)
-                        ListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          title: Text([
-                            if (r.tripDate != null) _formatDate(r.tripDate!),
-                            if (r.tripType != null) TripType.label(r.tripType!),
-                          ].join(' · ')),
-                          subtitle: Text([
-                            if (r.stop != null) r.stop!.name,
-                            if (r.boardedAt != null) 'Boarded ${DateFormat.jm().format(r.boardedAt!)}',
-                            if (r.droppedAt != null) 'Dropped ${DateFormat.jm().format(r.droppedAt!)}',
-                          ].join(' · ')),
-                          trailing: StatusChip(label: childStatusLabel(r.status), color: AppColors.forStatus(r.status)),
+                      for (var i = 0; i < rows.length; i++) ...[
+                        if (i > 0) const Divider(height: 1, color: AppColors.border),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      [
+                                        if (rows[i].tripDate != null) _formatDate(rows[i].tripDate!),
+                                        if (rows[i].tripType != null) TripType.label(rows[i].tripType!),
+                                      ].join(' · '),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        [
+                                          if (rows[i].stop != null) rows[i].stop!.name,
+                                          if (rows[i].boardedAt != null) 'Boarded ${DateFormat.jm().format(rows[i].boardedAt!)}',
+                                          if (rows[i].droppedAt != null) 'Dropped ${DateFormat.jm().format(rows[i].droppedAt!)}',
+                                        ].join(' · '),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 12, color: AppColors.slate),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              StatusChip(label: childStatusLabel(rows[i].status), color: AppColors.forStatus(rows[i].status)),
+                            ],
+                          ),
                         ),
+                      ],
                     ],
                   );
                 },
               ),
+            ),
             ),
           ],
         ),

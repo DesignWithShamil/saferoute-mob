@@ -66,41 +66,64 @@ class LiveTripSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final next = live.nextStop;
     final approach = approachText(live, live.childStop);
     final loc = live.location;
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: BorderRadius.circular(22),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.brand.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.directions_bus_rounded, size: 22, color: AppColors.brand),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      live.schoolName.isEmpty ? live.childName : '${live.childName} - ${live.schoolName}',
-                      style: theme.textTheme.titleMedium,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          live.schoolName.isEmpty ? live.childName : '${live.childName} - ${live.schoolName}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink, letterSpacing: -0.2),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          [
+                            'Bus ${live.busNumber}',
+                            if (live.routeName.isNotEmpty) live.routeName,
+                            if (live.tripType.isNotEmpty) '${TripType.label(live.tripType)} trip',
+                          ].join(' · '),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12, color: AppColors.slate),
+                        ),
+                      ],
                     ),
                   ),
-                  StatusChip(label: childStatusLabel(live.childStatus), color: AppColors.forStatus(live.childStatus)),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: StatusChip(label: childStatusLabel(live.childStatus), color: AppColors.forStatus(live.childStatus)),
+                  ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                [
-                  'Bus ${live.busNumber}',
-                  if (live.routeName.isNotEmpty) live.routeName,
-                  if (live.tripType.isNotEmpty) '${TripType.label(live.tripType)} trip',
-                ].join(' · '),
-                style: theme.textTheme.bodyMedium,
-              ),
-              const Divider(height: 20),
+              const Divider(height: 26, color: AppColors.border),
               _Line(icon: Icons.directions_bus, label: 'Trip', value: TripStatus.label(live.tripStatus)),
               _Line(icon: Icons.place_outlined, label: 'Next stop', value: next?.name ?? 'All stops completed'),
               if (live.childStop != null)
@@ -116,9 +139,19 @@ class LiveTripSummaryCard extends StatelessWidget {
                 color: loc == null || loc.isStale ? AppColors.amber : null,
               ),
               if (onTap != null)
-                const Align(
-                  alignment: Alignment.centerRight,
-                  child: Padding(padding: EdgeInsets.only(top: 4), child: Text('View live map ›')),
+                const Padding(
+                  padding: EdgeInsets.only(top: 10),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('View live map', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.brand)),
+                        SizedBox(width: 2),
+                        Icon(Icons.chevron_right, size: 20, color: AppColors.brand),
+                      ],
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -152,7 +185,7 @@ class SelectedChildHeader extends StatelessWidget {
               Text('Select child', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.slate)),
               const SizedBox(height: 8),
               SizedBox(
-                height: 40,
+                height: 42,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: c.children.length,
@@ -161,10 +194,15 @@ class SelectedChildHeader extends StatelessWidget {
                     final link = c.children[i];
                     final selected = link.student.publicId == child.student.publicId;
                     return ChoiceChip(
-                      label: Text(
-                        link.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      label: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 160),
+                        child: Text(
+                          link.student.fullName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       selected: selected,
                       onSelected: (_) => c.selectChild(link.student.publicId),
@@ -175,26 +213,53 @@ class SelectedChildHeader extends StatelessWidget {
               const SizedBox(height: 12),
             ],
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                CircleAvatar(child: Text(child.student.fullName.characters.firstOrNull ?? '?')),
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: AppColors.brand,
+                  foregroundColor: Colors.white,
+                  child: Text(
+                    child.student.fullName.characters.firstOrNull?.toUpperCase() ?? '?',
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Viewing', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.slate)),
-                      Text(child.label, style: theme.textTheme.titleMedium, key: const Key('selected-child-label')),
+                      Text(
+                        child.student.fullName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(height: 1.2, fontSize: 18),
+                        key: const Key('selected-child-label'),
+                      ),
+                      const SizedBox(height: 2),
                       Text(
                         [
                           if (child.student.classLabel.isNotEmpty) 'Class ${child.student.classLabel}',
                           bus == null ? 'No bus assigned' : 'Bus $bus',
                         ].join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodySmall,
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 6),
                 TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.brand,
+                    minimumSize: const Size(0, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
                   onPressed: () => showChildPicker(context),
                   child: Text(c.children.length > 1 ? 'More' : 'Add child'),
                 ),
@@ -224,7 +289,7 @@ Future<void> showChildPicker(BuildContext context) => showModalBottomSheet<void>
               for (final child in c.children)
                 ListTile(
                   leading: CircleAvatar(child: Text(child.student.fullName.characters.firstOrNull ?? '?')),
-                  title: Text(child.label),
+                  title: Text(child.student.fullName),
                   subtitle: Text([
                     if (child.student.classLabel.isNotEmpty) 'Class ${child.student.classLabel}',
                     if (child.student.pickupBus != null) 'Bus ${child.student.pickupBus!.busNumber}',
@@ -259,14 +324,24 @@ class _Line extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
+        padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, size: 18, color: color ?? AppColors.slate),
             const SizedBox(width: 8),
-            SizedBox(width: 84, child: Text(label, style: const TextStyle(color: AppColors.slate))),
-            Expanded(child: Text(value, style: TextStyle(fontWeight: FontWeight.w600, color: color))),
+            SizedBox(
+              width: 76,
+              child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.slate)),
+            ),
+            Expanded(
+              child: Text(
+                value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color ?? AppColors.ink),
+              ),
+            ),
           ],
         ),
       );

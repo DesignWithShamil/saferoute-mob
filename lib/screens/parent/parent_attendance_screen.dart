@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/api/api_exception.dart';
 import '../../models/student.dart';
 import '../../providers/parent_controller.dart';
+import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 import 'parent_widgets.dart';
 
@@ -60,7 +61,7 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
               if (rows.isEmpty) {
                 return RefreshIndicator(
                   onRefresh: () async => _reload(),
-                  child: ListView(children: const [
+                  child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [
                     SizedBox(height: 80),
                     EmptyView(icon: Icons.fact_check_outlined, title: 'No attendance records yet'),
                   ]),
@@ -68,23 +69,71 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
               }
               return RefreshIndicator(
                 onRefresh: () async => _reload(),
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                   itemCount: rows.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, i) {
                     final r = rows[i];
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text([
-                        if (r.tripDate != null) _date(r.tripDate!),
-                        if (r.tripType != null) r.tripType == 'AFTERNOON' ? 'Evening' : 'Morning',
-                      ].join(' · ')),
-                      subtitle: Text([
-                        if (r.stop != null) r.stop!.name,
-                        if (r.busNumber != null && r.busNumber!.isNotEmpty) 'Bus ${r.busNumber}',
-                      ].join(' · ')),
-                      trailing: StatusChip(label: childStatusLabel(r.status), color: AppColors.forStatus(r.status)),
+                    final evening = r.tripType == 'AFTERNOON';
+                    final sub = [
+                      if (r.stop != null) r.stop!.name,
+                      if (r.busNumber != null && r.busNumber!.isNotEmpty) 'Bus ${r.busNumber}',
+                    ].join(' · ');
+                    return SrFadeIn(
+                      delay: Duration(milliseconds: 40 * (i > 8 ? 8 : i)),
+                      child: Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: (evening ? AppColors.amber : AppColors.brand).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Icon(
+                                  evening ? Icons.nights_stay_outlined : Icons.wb_sunny_outlined,
+                                  size: 22,
+                                  color: evening ? AppColors.amber : AppColors.brand,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      [
+                                        if (r.tripDate != null) _date(r.tripDate!),
+                                        if (r.tripType != null) evening ? 'Evening' : 'Morning',
+                                      ].join(' · '),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink),
+                                    ),
+                                    if (sub.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Text(
+                                          sub,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontSize: 12, color: AppColors.slate),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              StatusChip(label: childStatusLabel(r.status), color: AppColors.forStatus(r.status)),
+                            ],
+                          ),
+                        ),
+                      ),
                     );
                   },
                 ),

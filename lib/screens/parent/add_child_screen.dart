@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/api/api_exception.dart';
 import '../../models/student.dart';
 import '../../providers/parent_controller.dart';
+import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 
 /// Add a child from any school to this parent account. The parent enters the
@@ -88,35 +89,38 @@ class _AddChildScreenState extends State<AddChildScreen> {
       body: Form(
         key: _form,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
           children: [
-            const Text(
-              'Enter the school secret from your school, this child\'s admission number, and the one-time link code. '
-              'Children from different schools can all be added to this account.',
+            const SrFadeIn(
+              child: Text(
+                'Enter the school secret from your school, this child\'s admission number, and the one-time link code. '
+                'Children from different schools can all be added to this account.',
+                style: TextStyle(fontSize: 14, color: AppColors.slate, height: 1.45),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             TextFormField(
               key: const Key('add-child-school-code'),
               controller: _schoolCode,
-              decoration: const InputDecoration(labelText: 'School secret', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'School secret'),
               textInputAction: TextInputAction.next,
               autocorrect: false,
               validator: _required,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             TextFormField(
               key: const Key('add-child-student-number'),
               controller: _studentNumber,
-              decoration: const InputDecoration(labelText: 'Student number (admission no.)', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Student number (admission no.)'),
               textInputAction: TextInputAction.next,
               autocorrect: false,
               validator: _required,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             TextFormField(
               key: const Key('add-child-link-code'),
               controller: _linkCode,
-              decoration: const InputDecoration(labelText: 'Link code', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Link code'),
               textCapitalization: TextCapitalization.characters,
               autocorrect: false,
               enableSuggestions: false,
@@ -125,7 +129,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _relation,
-              decoration: const InputDecoration(labelText: 'You are the child\'s', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'You are the child\'s'),
               items: [
                 for (final e in _relations.entries) DropdownMenuItem(value: e.key, child: Text(e.value)),
               ],
@@ -133,21 +137,22 @@ class _AddChildScreenState extends State<AddChildScreen> {
             ),
             if (preview != null) ...[
               const SizedBox(height: 16),
-              Card(
+              SrFadeIn(
+                child: Card(
                 color: AppColors.green.withValues(alpha: 0.08),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Is this your child?', style: TextStyle(fontWeight: FontWeight.w700)),
+                      const Text('Is this your child?', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate)),
                       const SizedBox(height: 4),
-                      Text(preview.fullName, style: Theme.of(context).textTheme.titleMedium),
+                      Text(preview.fullName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.ink)),
                       Text([
                         if (preview.classLabel.isNotEmpty) 'Class ${preview.classLabel}',
                         if (preview.admissionNumber.isNotEmpty) preview.admissionNumber,
-                      ].join(' · ')),
-                      Text(preview.schoolName),
+                      ].join(' · '), style: const TextStyle(fontSize: 14, color: AppColors.slate)),
+                      Text(preview.schoolName, style: const TextStyle(fontSize: 14, color: AppColors.slate)),
                       if (preview.alreadyLinked)
                         const Padding(
                           padding: EdgeInsets.only(top: 8),
@@ -157,12 +162,13 @@ class _AddChildScreenState extends State<AddChildScreen> {
                   ),
                 ),
               ),
+              ),
             ],
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: AppColors.red)),
+              Text(_error!, style: const TextStyle(fontSize: 14, color: AppColors.red)),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             FilledButton(
               key: const Key('add-child-submit'),
               onPressed: _busy || (preview?.alreadyLinked ?? false) ? null : _submit,

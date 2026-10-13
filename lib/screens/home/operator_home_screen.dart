@@ -30,19 +30,12 @@ class OperatorHomeScreen extends StatelessWidget {
         icon: const Icon(Icons.refresh),
         onPressed: () => context.read<OperatorTripController>().load(),
       ),
-      IconButton(
-        tooltip: 'Profile',
-        icon: const Icon(Icons.person_outline),
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => Scaffold(appBar: AppBar(title: const Text('Profile')), body: const ProfileView()),
-        )),
-      ),
     ];
 
     final tabs = <ShellTab>[
       ShellTab(
         label: 'Trip',
-        title: isDriver ? 'Driver · Today\'s trip' : 'Helper · Today\'s trip',
+        title: 'Today\'s trip',
         icon: Icons.directions_bus_outlined,
         body: const TripDashboard(),
         actions: tripActions,
@@ -90,6 +83,9 @@ class OperatorHomeScreen extends StatelessWidget {
 
     return SignedInShell(
       scrollableNavigation: false,
+      onSos: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => Scaffold(appBar: AppBar(title: const Text('Emergency SOS')), body: const SosScreen()),
+      )),
       tabs: tabs,
       drawerItems: drawerItems,
     );

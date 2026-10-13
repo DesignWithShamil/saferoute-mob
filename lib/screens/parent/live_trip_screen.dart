@@ -9,6 +9,7 @@ import '../../models/parent_live.dart';
 import '../../models/trip.dart';
 import '../../providers/parent_controller.dart';
 import '../../services/route_geometry_service.dart';
+import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 import '../../widgets/trip_map.dart';
 import 'child_detail_screen.dart';
@@ -88,9 +89,13 @@ class _LiveTripScreenState extends State<LiveTripScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(live == null
-            ? 'Live trip'
-            : '${live.childName}${live.schoolName.isEmpty ? '' : ' - ${live.schoolName}'} · Bus ${live.busNumber}'),
+        title: Text(
+          live == null
+              ? 'Live trip'
+              : '${live.childName}${live.schoolName.isEmpty ? '' : ' - ${live.schoolName}'} · Bus ${live.busNumber}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
       body: body,
     );
@@ -167,7 +172,7 @@ class _LiveBody extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: context.read<ParentController>().refreshLive,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           TripMap(
             stops: stops,
@@ -184,7 +189,7 @@ class _LiveBody extends StatelessWidget {
             ],
             heightFraction: 0.45,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             loc == null
                 ? 'Waiting for the bus to share its location.'
@@ -192,48 +197,101 @@ class _LiveBody extends StatelessWidget {
                     ? 'Bus location may be outdated (last update ${formatAge(loc.age)}).'
                     : 'Bus location updated ${formatAge(loc.age)}'
                         '${loc.speedKmh != null ? ' · ${loc.speedKmh!.round()} km/h' : ''}',
-            style: TextStyle(color: loc == null || loc.isStale ? AppColors.amber : AppColors.slate),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: loc == null || loc.isStale ? AppColors.amber : AppColors.slate),
           ),
           if (liveError != null)
-            Text('Couldn\'t refresh: $liveError', style: const TextStyle(color: AppColors.red)),
-          const SizedBox(height: 12),
-          LiveTripSummaryCard(live: live),
-          if (next != null)
-            SectionCard(
-              title: 'Next stop',
-              trailing: Text(approachText(live, next) ?? ''),
-              child: Text(next.name, style: Theme.of(context).textTheme.titleMedium),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('Couldn\'t refresh: $liveError', style: const TextStyle(fontSize: 12, color: AppColors.red)),
             ),
-          SectionCard(
+          const SizedBox(height: 14),
+          SrFadeIn(child: LiveTripSummaryCard(live: live)),
+          if (next != null)
+            SrFadeIn(
+              delay: const Duration(milliseconds: 80),
+              child: SectionCard(
+                title: 'Next stop',
+                trailing: Flexible(
+                  child: Text(
+                    approachText(live, next) ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate),
+                  ),
+                ),
+                child: Text(
+                  next.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink),
+                ),
+              ),
+            ),
+          SrFadeIn(
+            delay: const Duration(milliseconds: 150),
+            child: SectionCard(
             title: 'Stops',
             child: Column(
               children: [
                 for (final s in live.stops)
-                  ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      radius: 14,
-                      backgroundColor: identical(s, next)
-                          ? AppColors.amber
-                          : s.status == TripStopStatus.departed
-                              ? AppColors.green
-                              : AppColors.slate.withValues(alpha: 0.25),
-                      child: Text('${s.sequence}', style: const TextStyle(fontSize: 12, color: Colors.white)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 15,
+                          backgroundColor: identical(s, next)
+                              ? AppColors.amber
+                              : s.status == TripStopStatus.departed
+                                  ? AppColors.green
+                                  : AppColors.slate.withValues(alpha: 0.25),
+                          child: Text('${s.sequence}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                s.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: s.publicId == childStopId ? FontWeight.w800 : FontWeight.w600,
+                                  color: AppColors.ink,
+                                ),
+                              ),
+                              if ([
+                                if (s.publicId == childStopId) 'Your child\'s stop',
+                                if (s.arrivedAt != null) 'Arrived',
+                                if (s.departedAt != null) 'Departed',
+                              ].isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    [
+                                      if (s.publicId == childStopId) 'Your child\'s stop',
+                                      if (s.arrivedAt != null) 'Arrived ${DateFormat.jm().format(s.arrivedAt!)}',
+                                      if (s.departedAt != null) 'Departed ${DateFormat.jm().format(s.departedAt!)}',
+                                    ].join(' · '),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12, color: AppColors.slate),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        StatusChip(label: s.status, color: AppColors.forStatus(s.status)),
+                      ],
                     ),
-                    title: Text(
-                      s.name,
-                      style: TextStyle(fontWeight: s.publicId == childStopId ? FontWeight.w800 : FontWeight.normal),
-                    ),
-                    subtitle: Text([
-                      if (s.publicId == childStopId) 'Your child\'s stop',
-                      if (s.arrivedAt != null) 'Arrived ${DateFormat.jm().format(s.arrivedAt!)}',
-                      if (s.departedAt != null) 'Departed ${DateFormat.jm().format(s.departedAt!)}',
-                    ].join(' · ')),
-                    trailing: StatusChip(label: s.status, color: AppColors.forStatus(s.status)),
                   ),
               ],
             ),
+          ),
           ),
         ],
       ),

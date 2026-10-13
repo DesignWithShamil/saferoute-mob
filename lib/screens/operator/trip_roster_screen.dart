@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/operator_trip_controller.dart';
+import '../../widgets/sr_animations.dart';
 import 'attendance_roster.dart';
 
 /// Full student roster for the active trip (by stop) — keeps the main trip page short.
@@ -22,15 +23,17 @@ class TripRosterScreen extends StatelessWidget {
         title: Text(trip.isAfternoon ? 'Drop roster' : 'Pickup roster'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         children: [
-          AttendanceRosterView(
-            roster: c.roster,
-            isAfternoon: trip.isAfternoon,
-            dropActions: trip.isAfternoon,
-            groupByStop: true,
-            showStats: true,
-            actionsInDetail: true,
+          SrFadeIn(
+            child: AttendanceRosterView(
+              roster: c.roster,
+              isAfternoon: trip.isAfternoon,
+              dropActions: trip.isAfternoon,
+              groupByStop: true,
+              showStats: true,
+              actionsInDetail: true,
+            ),
           ),
         ],
       ),

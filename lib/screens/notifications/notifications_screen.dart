@@ -131,8 +131,9 @@ class _NotificationsListState extends State<NotificationsList> {
       });
     }
 
-    final typeFilterBar = Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+    final typeFilterBar = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
       child: Row(
         children: [
           ChoiceChip(
@@ -176,7 +177,7 @@ class _NotificationsListState extends State<NotificationsList> {
                   }
                   final child = parent.children[i];
                   return ChoiceChip(
-                    label: Text(child.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    label: Text(child.student.fullName, maxLines: 1, overflow: TextOverflow.ellipsis),
                     selected: !c.showAllChildren && c.studentFilter == child.student.publicId,
                     onSelected: (_) => c.filterByChild(child.student.publicId),
                   );
@@ -218,8 +219,9 @@ class _NotificationsListState extends State<NotificationsList> {
             return false;
           },
           child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             itemCount: displayedItems.length + (c.hasMore ? 1 : 0),
-            separatorBuilder: (_, _) => const Divider(height: 1),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, i) {
               if (i >= displayedItems.length) {
                 return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
@@ -259,10 +261,21 @@ class _NotificationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final unread = !item.isRead;
-    return ListTile(
+    final emergency = item.type == 'EMERGENCY_ALERT';
+    final accent = emergency ? AppColors.red : AppColors.brand;
+    return Container(
+      decoration: BoxDecoration(
+        color: unread ? Color.alphaBlend(accent.withValues(alpha: 0.05), Colors.white) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: unread ? accent.withValues(alpha: 0.30) : AppColors.border),
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: ListTile(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       leading: CircleAvatar(
-        backgroundColor: unread ? AppColors.brand.withValues(alpha: 0.12) : theme.colorScheme.surfaceContainerHighest,
-        child: Icon(_icon(item.type), color: unread ? AppColors.brand : AppColors.slate),
+        backgroundColor: unread ? accent.withValues(alpha: 0.14) : theme.colorScheme.surfaceContainerHighest,
+        child: Icon(_icon(item.type), color: unread ? accent : AppColors.slate),
       ),
       title: Text(item.title, style: TextStyle(fontWeight: unread ? FontWeight.w700 : FontWeight.w500)),
       subtitle: Column(
@@ -296,6 +309,8 @@ class _NotificationTile extends StatelessWidget {
         final hasTarget = item.data.containsKey('trip_id') || item.data.containsKey('student_id');
         if (hasTarget) context.read<AppServices>().deepLinks.open({...item.data, 'type': item.type});
       },
+    ),
+      ),
     );
   }
 }

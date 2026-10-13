@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/student.dart';
 import '../../providers/parent_controller.dart';
+import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 import 'add_child_screen.dart';
 import 'child_detail_screen.dart';
@@ -45,22 +46,31 @@ class _ChildrenListScreenState extends State<ChildrenListScreen> with AutomaticK
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 Row(
                   children: [
-                    Expanded(child: Text('My children', style: Theme.of(context).textTheme.titleLarge)),
+                    const Expanded(
+                      child: Text(
+                        'My children',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.ink, letterSpacing: -0.3),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     FilledButton.tonalIcon(
+                      style: FilledButton.styleFrom(minimumSize: const Size(0, 44), padding: const EdgeInsets.symmetric(horizontal: 16)),
                       onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AddChildScreen())),
                       icon: const Icon(Icons.add),
                       label: const Text('Add child'),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                const _PickupPinCard(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
+                const SrFadeIn(child: _PickupPinCard()),
+                const SizedBox(height: 4),
                 if (c.children.isEmpty)
                   const Padding(
                     padding: EdgeInsets.only(top: 48),
@@ -71,17 +81,19 @@ class _ChildrenListScreenState extends State<ChildrenListScreen> with AutomaticK
                     ),
                   )
                 else
-                  ...c.children.map((child) => _ChildSummaryCard(
-                        link: child,
-                        selected: child.student.publicId == c.selectedChild?.student.publicId,
+                  ...c.children.asMap().entries.map((e) => SrFadeIn(
+                        delay: Duration(milliseconds: 80 + 70 * (e.key > 6 ? 6 : e.key)),
+                        child: _ChildSummaryCard(
+                        link: e.value,
+                        selected: e.value.student.publicId == c.selectedChild?.student.publicId,
                         onTap: () async {
-                          await c.selectChild(child.student.publicId);
+                          await c.selectChild(e.value.student.publicId);
                           if (!context.mounted) return;
                           await Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => ChildDetailScreen(studentId: child.student.publicId),
+                            builder: (_) => ChildDetailScreen(studentId: e.value.student.publicId),
                           ));
                         },
-                      )),
+                      ))),
               ]),
             ),
           ),
@@ -101,72 +113,138 @@ class _ChildSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = link.student;
-    final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: AppColors.border)),
-      child: InkWell(
+    final meta = [
+      if (s.classLabel.isNotEmpty) s.classLabel,
+      if (s.admissionNumber.isNotEmpty) s.admissionNumber,
+    ].join(' · ');
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: AppColors.brand.withValues(alpha: 0.12),
-                    child: Text(
-                      s.fullName.isEmpty ? '?' : s.fullName.characters.first.toUpperCase(),
-                      style: const TextStyle(color: AppColors.brand, fontWeight: FontWeight.bold, fontSize: 20),
+        border: Border.all(color: selected ? AppColors.brand.withValues(alpha: 0.5) : AppColors.border, width: selected ? 1.5 : 1),
+      ),
+      child: Material(
+        color: Theme.of(context).cardTheme.color ?? Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: AppColors.brand.withValues(alpha: 0.12),
+                      child: Text(
+                        s.fullName.isEmpty ? '?' : s.fullName.characters.first.toUpperCase(),
+                        style: const TextStyle(color: AppColors.brand, fontWeight: FontWeight.w800, fontSize: 20),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(s.fullName, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                        Text(
-                          [
-                            if (s.classLabel.isNotEmpty) s.classLabel,
-                            if (s.admissionNumber.isNotEmpty) s.admissionNumber,
-                          ].join(' · '),
-                          style: const TextStyle(color: AppColors.slate),
-                        ),
-                        Text(link.school.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                        if (link.relation.isNotEmpty)
-                          Text(link.relation.toUpperCase(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.brand)),
-                      ],
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            s.fullName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.ink, letterSpacing: -0.2),
+                          ),
+                          if (meta.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(meta, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, color: AppColors.slate)),
+                            ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              link.school.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.ink),
+                            ),
+                          ),
+                          if (link.relation.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                link.relation.toUpperCase(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.brand, letterSpacing: 0.6),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Icon(selected ? Icons.check_circle : Icons.chevron_right, color: selected ? AppColors.green : AppColors.slate),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (link.pickupRoute != null)
-                    StatusChip(label: 'Morning · ${link.pickupRoute!.name}', color: AppColors.brand),
-                  if (link.dropRoute != null)
-                    StatusChip(label: 'Evening · ${link.dropRoute!.name}', color: AppColors.amber),
-                  if (s.pickupBus != null) StatusChip(label: 'Bus ${s.pickupBus!.busNumber}', color: AppColors.slate),
-                  if (s.pickupStop != null) StatusChip(label: s.pickupStop!.name, color: AppColors.slate),
-                  StatusChip(label: s.status.isEmpty ? 'ACTIVE' : s.status, color: AppColors.green),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 8),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      child: Icon(
+                        selected ? Icons.check_circle : Icons.chevron_right,
+                        key: ValueKey(selected),
+                        color: selected ? AppColors.green : AppColors.slate,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (link.pickupRoute != null) _Tag(label: 'Morning · ${link.pickupRoute!.name}', color: AppColors.brand),
+                    if (link.dropRoute != null) _Tag(label: 'Evening · ${link.dropRoute!.name}', color: AppColors.amber),
+                    if (s.pickupBus != null) _Tag(label: 'Bus ${s.pickupBus!.busNumber}', color: AppColors.slate),
+                    if (s.pickupStop != null) _Tag(label: s.pickupStop!.name, color: AppColors.slate),
+                    StatusChip(label: s.status.isEmpty ? 'ACTIVE' : s.status, color: AppColors.green),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Chip that ellipsizes long names instead of overflowing.
+class _Tag extends StatelessWidget {
+  const _Tag({required this.label, required this.color});
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width - 92),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
 }
 
 /// Web-style pickup PIN block (mock until PIN API exists).
@@ -218,7 +296,10 @@ class _PickupPinCardState extends State<_PickupPinCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Set a permanent PIN or generate a temporary one for today. This applies to all your children.'),
+          const Text(
+            'Set a permanent PIN or generate a temporary one for today. This applies to all your children.',
+            style: TextStyle(fontSize: 14, color: AppColors.slate, height: 1.4),
+          ),
           const SizedBox(height: 16),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -247,13 +328,13 @@ class _PickupPinCardState extends State<_PickupPinCard> {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.slate.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.slate.withValues(alpha: 0.12)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Permanent PIN', style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text('Permanent PIN', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink)),
             const SizedBox(height: 4),
             const Text('Set a secure 4-digit code for everyday pickups.', style: TextStyle(fontSize: 12, color: AppColors.slate)),
             const SizedBox(height: 10),
@@ -263,8 +344,17 @@ class _PickupPinCardState extends State<_PickupPinCard> {
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(labelText: 'PIN', counterText: '', isDense: true),
             ),
-            if (_error != null) Text(_error!, style: const TextStyle(color: AppColors.red, fontSize: 12)),
-            const SizedBox(height: 8),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              alignment: Alignment.topLeft,
+              child: _error == null
+                  ? const SizedBox(width: double.infinity)
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(_error!, style: const TextStyle(color: AppColors.red, fontSize: 12)),
+                    ),
+            ),
+            const SizedBox(height: 10),
             FilledButton(onPressed: _savePermanent, child: const Text('Save')),
           ],
         ),
@@ -274,26 +364,39 @@ class _PickupPinCardState extends State<_PickupPinCard> {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.brand.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.brand.withValues(alpha: 0.25)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Temporary PIN', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.brand)),
+            const Text('Temporary PIN', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.brand)),
             const SizedBox(height: 4),
             const Text('Valid for today only. Useful for one-time pickups.', style: TextStyle(fontSize: 12, color: AppColors.brand)),
             const SizedBox(height: 10),
-            if (_tempPin == null)
-              OutlinedButton.icon(onPressed: _generateTemp, icon: const Icon(Icons.refresh), label: const Text('Auto-generate'))
-            else
-              Row(
-                children: [
-                  Text(_tempPin!, style: Theme.of(context).textTheme.headlineSmall),
-                  const SizedBox(width: 12),
-                  const StatusChip(label: 'Active today', color: AppColors.green),
-                ],
-              ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: _tempPin == null
+                  ? OutlinedButton.icon(
+                      key: const ValueKey('gen'),
+                      onPressed: _generateTemp,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Auto-generate'),
+                    )
+                  : Wrap(
+                      key: const ValueKey('pin'),
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        Text(
+                          _tempPin!,
+                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: 6, color: AppColors.ink),
+                        ),
+                        const StatusChip(label: 'Active today', color: AppColors.green),
+                      ],
+                    ),
+            ),
           ],
         ),
       );

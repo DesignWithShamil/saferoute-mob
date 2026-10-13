@@ -18,19 +18,35 @@ class StudentHeaderCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 32,
+          Container(
+            width: 64,
+            height: 64,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: AppColors.brand.withValues(alpha: 0.25), blurRadius: 12, offset: const Offset(0, 4))],
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.brand, AppColors.brandDeep],
+              ),
+            ),
             child: Text(
               student.fullName.isNotEmpty ? student.fullName.characters.first.toUpperCase() : '?',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(student.fullName, style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  student.fullName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: AppColors.ink),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   [
@@ -39,17 +55,19 @@ class StudentHeaderCard extends StatelessWidget {
                     if (student.admissionNumber.isNotEmpty) student.admissionNumber,
                     if (student.status.isNotEmpty) student.status,
                   ].join(' · '),
-                  style: const TextStyle(color: AppColors.slate, height: 1.35),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, color: AppColors.slate, height: 1.4),
                 ),
                 if (student.bloodGroup != null && student.bloodGroup!.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.only(top: 8),
                     child: StatusChip(label: 'Blood group ${student.bloodGroup}', color: AppColors.red),
                   ),
               ],
             ),
           ),
-          ?trailing,
+          if (trailing != null) ...[const SizedBox(width: 8), trailing!],
         ],
       ),
     );
@@ -85,32 +103,85 @@ class ParentsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (rows.isEmpty)
-            const Text('No linked parents on file.')
+            const Text('No linked parents on file.', style: TextStyle(fontSize: 14, color: AppColors.slate))
           else
             for (final p in rows)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.person_outline),
-                title: Text(p.fullName.isEmpty ? 'Parent' : p.fullName),
-                subtitle: Text([
+              _ContactTile(
+                icon: Icons.person_outline,
+                color: AppColors.brand,
+                title: p.fullName.isEmpty ? 'Parent' : p.fullName,
+                subtitle: [
                   if (p.relation.isNotEmpty) p.relation.toUpperCase(),
                   if (p.phone.isNotEmpty) p.phone,
                   if (p.email.isNotEmpty) p.email,
-                ].join(' · ')),
+                ].join(' · '),
               ),
           if (student.emergencyContactPhone.isNotEmpty || student.emergencyContactName.isNotEmpty) ...[
-            const Divider(),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.emergency_outlined, color: AppColors.red),
-              title: Text(student.emergencyContactName.isEmpty ? 'Emergency contact' : student.emergencyContactName),
-              subtitle: Text(student.emergencyContactPhone),
+            _ContactTile(
+              icon: Icons.emergency_outlined,
+              color: AppColors.red,
+              title: student.emergencyContactName.isEmpty ? 'Emergency contact' : student.emergencyContactName,
+              subtitle: student.emergencyContactPhone,
             ),
           ],
         ],
       ),
     );
   }
+}
+
+class _ContactTile extends StatelessWidget {
+  const _ContactTile({required this.icon, required this.color, required this.title, required this.subtitle});
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        constraints: const BoxConstraints(minHeight: 56),
+        decoration: BoxDecoration(
+          color: AppColors.bg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, size: 20, color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink),
+                  ),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, color: AppColors.slate, height: 1.35),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class TransportLegSection extends StatelessWidget {
@@ -151,8 +222,8 @@ class TransportLegSection extends StatelessWidget {
             _infoRow(Icons.support_agent_outlined, 'Helper', '${crewHelper!.fullName}${crewHelper!.phone.isNotEmpty ? ' · ${crewHelper!.phone}' : ''}'),
           if (routeStops != null && routeStops!.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text('Route stops', style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 6),
+            const Text('Route stops', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink)),
+            const SizedBox(height: 8),
             RouteStopsList(stops: routeStops!, highlightStopId: stop?.publicId),
           ],
         ],
@@ -185,9 +256,23 @@ class TransportLegSection extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 20, color: AppColors.brand),
-            const SizedBox(width: 10),
-            Expanded(child: Text('$label\n$value', style: const TextStyle(height: 1.35))),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(color: AppColors.brand.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, size: 18, color: AppColors.brand),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate)),
+                  const SizedBox(height: 2),
+                  Text(value, maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink, height: 1.35)),
+                ],
+              ),
+            ),
           ],
         ),
       );
@@ -206,11 +291,12 @@ class RouteStopsList extends StatelessWidget {
       children: [
         for (final s in sorted)
           Container(
-            margin: const EdgeInsets.only(bottom: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            constraints: const BoxConstraints(minHeight: 44),
             decoration: BoxDecoration(
               color: s.publicId == highlightStopId ? AppColors.brand.withValues(alpha: 0.08) : AppColors.slate.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: s.publicId == highlightStopId ? AppColors.brand.withValues(alpha: 0.35) : Colors.transparent,
               ),
@@ -220,13 +306,15 @@ class RouteStopsList extends StatelessWidget {
                 CircleAvatar(
                   radius: 14,
                   backgroundColor: s.publicId == highlightStopId ? AppColors.brand : AppColors.slate.withValues(alpha: 0.15),
-                  child: Text('${s.sequence}', style: TextStyle(fontSize: 12, color: s.publicId == highlightStopId ? Colors.white : AppColors.slate)),
+                  child: Text('${s.sequence}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: s.publicId == highlightStopId ? Colors.white : AppColors.slate)),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     s.name,
-                    style: TextStyle(fontWeight: s.publicId == highlightStopId ? FontWeight.w700 : FontWeight.w500),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, color: AppColors.ink, fontWeight: s.publicId == highlightStopId ? FontWeight.w800 : FontWeight.w500),
                   ),
                 ),
               ],

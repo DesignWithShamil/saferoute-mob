@@ -18,7 +18,7 @@ android {
 
     defaultConfig {
         // Must match the Android app registered in the Firebase project.
-        applicationId = "com.saferoute.app"
+        applicationId = "com.saferoute"
         minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

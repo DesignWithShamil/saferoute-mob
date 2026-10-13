@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_services.dart';
 import '../../providers/auth_controller.dart';
 import '../../providers/notifications_controller.dart';
+import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 import '../notifications/notifications_screen.dart';
 
@@ -36,6 +38,10 @@ class ShellDrawerItem {
 
 /// Bottom-navigation scaffold shared by the role homes. On first build it
 /// runs the post-sign-in notification setup (permission + FCM token).
+///
+/// The bottom bar shows the main tabs around a floating centre button. That
+/// button opens a bottom panel with every other option (history, alerts,
+/// profile, SOS, log out …) – there is no side drawer any more.
 class SignedInShell extends StatefulWidget {
   const SignedInShell({
     super.key,
@@ -43,23 +49,31 @@ class SignedInShell extends StatefulWidget {
     this.drawerItems = const [],
     this.alertsTabIndex,
     this.scrollableNavigation = false,
+    this.onSos,
   });
 
   final List<ShellTab> tabs;
+
+  /// Items for the "More" panel. Entries that point at a tab are skipped
+  /// because those tabs already live in the bottom bar.
   final List<ShellDrawerItem> drawerItems;
   final int? alertsTabIndex;
 
-  /// Kept for API compatibility. The bottom bar now always shows only the
-  /// main tabs; everything else lives in the drawer behind the "More" button.
+  /// When set, a red SOS shortcut is shown in the top bar (driver / helper).
+  final VoidCallback? onSos;
+
+  /// Kept for API compatibility.
   final bool scrollableNavigation;
 
   @override
   State<SignedInShell> createState() => _SignedInShellState();
 }
 
-class _SignedInShellState extends State<SignedInShell> {
+class _SignedInShellState extends State<SignedInShell> with SingleTickerProviderStateMixin {
   int _index = 0;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _moreOpen = false;
+  late final AnimationController _pageAnim =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 320), value: 1);
 
   @override
   void initState() {
@@ -74,296 +88,195 @@ class _SignedInShellState extends State<SignedInShell> {
   }
 
   @override
+  void dispose() {
+    _pageAnim.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final unread = context.select<NotificationsController, int>((c) => c.unread);
     final tab = widget.tabs[_index];
+    final fade = CurvedAnimation(parent: _pageAnim, curve: Curves.easeOutCubic);
     return Scaffold(
-      key: _scaffoldKey,
       extendBody: false,
       appBar: AppBar(
-        title: Text(tab.title ?? tab.label),
+        automaticallyImplyLeading: false,
+        titleSpacing: 20,
+        title: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          transitionBuilder: (child, anim) => FadeTransition(
+            opacity: anim,
+            child: SlideTransition(
+              position: Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero).animate(anim),
+              child: child,
+            ),
+          ),
+          layoutBuilder: (current, previous) => Stack(
+            alignment: Alignment.centerLeft,
+            children: [...previous, ?current],
+          ),
+          child: Text(tab.title ?? tab.label, key: ValueKey(_index), maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
         actions: [
           ...tab.actions,
           if (_index == widget.alertsTabIndex) const ClearAllNotificationsButton(),
           if (_index == widget.alertsTabIndex) const MarkAllReadButton(),
-          const SizedBox(width: 4),
+          _BellButton(
+            unread: unread,
+            onTap: () {
+              HapticFeedback.selectionClick();
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+            },
+          ),
+          if (widget.onSos != null) _SosChip(onTap: widget.onSos!),
+          const SizedBox(width: 12),
         ],
       ),
-      drawer: widget.drawerItems.isNotEmpty ? _buildDrawer(context, unread) : null,
-      body: IndexedStack(
-        index: _index,
-        sizing: StackFit.expand,
-        children: [for (final t in widget.tabs) SizedBox.expand(child: t.body)],
+      body: FadeTransition(
+        opacity: fade,
+        child: SlideTransition(
+          position: Tween<Offset>(begin: const Offset(0, 0.015), end: Offset.zero).animate(fade),
+          child: IndexedStack(
+            index: _index,
+            sizing: StackFit.expand,
+            children: [for (final t in widget.tabs) SizedBox.expand(child: t.body)],
+          ),
+        ),
       ),
-      // Only the 4 main destinations live in the bottom bar. Everything else
-      // (history, alerts, SOS, profile …) sits behind the centre "More" button.
-      bottomNavigationBar: _FloatingNavBar(
+      bottomNavigationBar: _DockBar(
         tabs: widget.tabs,
         selectedIndex: _index,
         alertsTabIndex: widget.alertsTabIndex,
         unread: unread,
+        moreOpen: _moreOpen,
+        hasMore: widget.drawerItems.any((i) => i.tabIndex == null),
         onSelected: _selectTab,
-        onMore: widget.drawerItems.isEmpty ? null : () => _scaffoldKey.currentState?.openDrawer(),
-      ),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context, int unreadCount) {
-    final auth = context.watch<AuthController>();
-    final user = auth.user;
-    final school = auth.school;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    String roleDisplay = 'User';
-    if (user != null) {
-      if (user.isDriver) {
-        roleDisplay = 'Driver';
-      } else if (user.isHelper) {
-        roleDisplay = 'Helper';
-      } else if (user.isParent) {
-        roleDisplay = 'Parent';
-      } else {
-        roleDisplay = user.role.replaceAll('_', ' ');
-      }
-    }
-
-    final initial = (user?.fullName.isNotEmpty == true)
-        ? user!.fullName.characters.first.toUpperCase()
-        : '?';
-
-    final mainItems = widget.drawerItems.where((i) => i.tabIndex != null).toList();
-    final moreItems = widget.drawerItems.where((i) => i.tabIndex == null).toList();
-
-    return Drawer(
-      width: 308,
-      child: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            // Header
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 24, 20, 22),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.ink, Color(0xFF1B2A6B), AppColors.brand],
-                ),
-                borderRadius: BorderRadius.only(bottomRight: Radius.circular(28)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 58,
-                    height: 58,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
-                    ),
-                    child: Text(
-                      initial,
-                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    user?.fullName ?? 'SafeRoute',
-                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          roleDisplay.toUpperCase(),
-                          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: Colors.white),
-                        ),
-                      ),
-                      if (school != null)
-                        Text(
-                          school.name,
-                          style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.82)),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Navigation items
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(12, 14, 12, 8),
-                children: [
-                  if (mainItems.isNotEmpty) _drawerSectionLabel(context, 'MAIN'),
-                  for (final item in mainItems) _buildDrawerTile(context, item, unreadCount),
-                  if (moreItems.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    _drawerSectionLabel(context, 'MORE'),
-                    for (final item in moreItems) _buildDrawerTile(context, item, unreadCount),
-                  ],
-                ],
-              ),
-            ),
-
-            // Logout & footer
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
-              child: Material(
-                color: AppColors.red.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Log out'),
-                        content: const Text('Are you sure you want to log out?'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                          FilledButton(
-                            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Log out'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirm == true && context.mounted) {
-                      await auth.logout();
-                    }
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    child: Row(
-                      children: [
-                        Icon(Icons.logout_rounded, color: AppColors.red, size: 22),
-                        SizedBox(width: 14),
-                        Text('Log out', style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w700, fontSize: 15)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10, top: 2),
-              child: Text(
-                'SafeRoute © ${DateTime.now().year}',
-                style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _drawerSectionLabel(BuildContext context, String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-        child: Text(
-          text,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: AppColors.slate),
-        ),
-      );
-
-  Widget _buildDrawerTile(BuildContext context, ShellDrawerItem item, int unreadCount) {
-    final isSelected = item.tabIndex != null && item.tabIndex == _index;
-    final scheme = Theme.of(context).colorScheme;
-
-    Widget? badge;
-    final effectiveBadge = item.badgeCount ?? (item.label.toLowerCase().contains('alert') ? unreadCount : null);
-    if (effectiveBadge != null && effectiveBadge > 0) {
-      badge = Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(color: AppColors.red, borderRadius: BorderRadius.circular(10)),
-        child: Text(
-          '$effectiveBadge',
-          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
-        ),
-      );
-    }
-
-    final Color fg = isSelected ? Colors.white : (item.isDestructive ? AppColors.red : AppColors.ink);
-    final Color iconBg = isSelected
-        ? Colors.white.withValues(alpha: 0.18)
-        : (item.isDestructive ? AppColors.red.withValues(alpha: 0.10) : scheme.primary.withValues(alpha: 0.08));
-    final Color iconFg = isSelected ? Colors.white : (item.isDestructive ? AppColors.red : scheme.primary);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Material(
-        color: isSelected ? scheme.primary : Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            Navigator.of(context).pop();
-            if (item.tabIndex != null) {
-              _selectTab(item.tabIndex!);
-            } else if (item.onTap != null) {
-              item.onTap!();
-            }
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-            child: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(12)),
-                  child: Icon(item.icon, size: 21, color: iconFg),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    item.label,
-                    style: TextStyle(fontSize: 15, fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600, color: fg),
-                  ),
-                ),
-                if (badge != null) badge,
-              ],
-            ),
-          ),
-        ),
+        onMore: _openMore,
       ),
     );
   }
 
   void _selectTab(int i) {
+    if (i != _index) {
+      HapticFeedback.selectionClick();
+      _pageAnim.forward(from: 0);
+    }
     setState(() => _index = i);
     if (i == widget.alertsTabIndex) context.read<NotificationsController>().load();
   }
+
+  Future<void> _openMore() async {
+    if (_moreOpen) return;
+    HapticFeedback.mediumImpact();
+    setState(() => _moreOpen = true);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: false,
+      backgroundColor: Colors.transparent,
+      barrierColor: AppColors.ink.withValues(alpha: 0.45),
+      builder: (sheetContext) => _MoreSheet(
+        items: widget.drawerItems.where((i) => i.tabIndex == null).toList(),
+        onItem: (item) {
+          Navigator.of(sheetContext).pop();
+          item.onTap?.call();
+        },
+        onLogout: () async {
+          Navigator.of(sheetContext).pop();
+          final auth = context.read<AuthController>();
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Log out'),
+              content: const Text('Are you sure you want to log out?'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Log out'),
+                ),
+              ],
+            ),
+          );
+          if (confirm == true && mounted) await auth.logout();
+        },
+      ),
+    );
+    if (mounted) setState(() => _moreOpen = false);
+  }
 }
 
-/// Floating dark pill with the 4 main destinations split around a raised
-/// centre "More" button that opens the side drawer.
-class _FloatingNavBar extends StatelessWidget {
-  const _FloatingNavBar({
+// ---------------------------------------------------------------------------
+// Top bar bits
+// ---------------------------------------------------------------------------
+
+/// Bell with unread badge shown in the top bar of every tab.
+class _BellButton extends StatelessWidget {
+  const _BellButton({required this.unread, required this.onTap});
+  final int unread;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget icon = const Icon(Icons.notifications_none_rounded, size: 26);
+    if (unread > 0) {
+      icon = Badge(
+        label: Text(unread > 99 ? '99+' : '$unread'),
+        backgroundColor: AppColors.red,
+        child: const Icon(Icons.notifications_rounded, size: 26),
+      );
+    }
+    return IconButton(tooltip: 'Notifications', icon: icon, onPressed: onTap);
+  }
+}
+
+/// Always-visible emergency shortcut (driver / helper).
+class _SosChip extends StatelessWidget {
+  const _SosChip({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppColors.red,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            onTap();
+          },
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.sos_rounded, color: Colors.white, size: 17),
+                SizedBox(width: 4),
+                Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12.5, letterSpacing: 0.4)),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+// ---------------------------------------------------------------------------
+// Bottom bar
+// ---------------------------------------------------------------------------
+
+/// Light floating bar: main tabs on both sides of a floating centre button.
+/// A soft pill slides behind the active tab.
+class _DockBar extends StatelessWidget {
+  const _DockBar({
     required this.tabs,
     required this.selectedIndex,
     required this.onSelected,
     required this.onMore,
+    required this.moreOpen,
+    required this.hasMore,
     this.alertsTabIndex,
     this.unread = 0,
   });
@@ -372,107 +285,402 @@ class _FloatingNavBar extends StatelessWidget {
   final int selectedIndex;
   final int? alertsTabIndex;
   final int unread;
+  final bool moreOpen;
+  final bool hasMore;
   final ValueChanged<int> onSelected;
-  final VoidCallback? onMore;
+  final VoidCallback onMore;
 
-  static const double _pillHeight = 68;
-  static const double _orb = 60;
+  static const double _bar = 62;
+  static const double _lift = 14;
+  static const double _orb = 52;
+  static const double _gap = 74;
 
   @override
   Widget build(BuildContext context) {
     final bg = Theme.of(context).scaffoldBackgroundColor;
-    final hasOrb = onMore != null;
     final half = (tabs.length / 2).ceil();
-    final left = [for (var i = 0; i < half; i++) i];
-    final right = [for (var i = half; i < tabs.length; i++) i];
-
-    Widget item(int i) => Expanded(
-          child: _NavItem(
-            tab: tabs[i],
-            selected: i == selectedIndex,
-            badge: i == alertsTabIndex ? unread : 0,
-            onTap: () => onSelected(i),
-          ),
-        );
-
+    final gap = hasMore ? _gap : 0.0;
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
         child: SizedBox(
-          height: _pillHeight + (hasOrb ? 16 : 0),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: _pillHeight,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppColors.ink,
-                    borderRadius: BorderRadius.circular(34),
-                    boxShadow: [
-                      BoxShadow(color: AppColors.ink.withValues(alpha: 0.28), blurRadius: 24, offset: const Offset(0, 10)),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      children: [
-                        for (final i in left) item(i),
-                        if (hasOrb) const SizedBox(width: _orb + 14),
-                        for (final i in right) item(i),
-                      ],
+          height: _bar + (hasMore ? _lift : 0),
+          child: LayoutBuilder(
+            builder: (context, box) {
+              const pad = 6.0;
+              final itemW = (box.maxWidth - pad * 2 - gap) / tabs.length;
+              double xOf(int i) => pad + itemW * i + (i >= half ? gap : 0);
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: _bar,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(31),
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 18, offset: const Offset(0, 6)),
+                        ],
+                      ),
                     ),
                   ),
+                  // Sliding highlight behind the active tab.
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOutCubic,
+                    left: xOf(selectedIndex) + 3,
+                    bottom: 8,
+                    width: itemW - 6,
+                    height: _bar - 16,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.brand.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: _bar,
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: pad),
+                        child: Row(
+                          children: [
+                            for (var i = 0; i < tabs.length; i++) ...[
+                              if (i == half && hasMore) const SizedBox(width: _gap),
+                              Expanded(
+                                child: _DockItem(
+                                  tab: tabs[i],
+                                  selected: i == selectedIndex,
+                                  badge: i == alertsTabIndex ? unread : 0,
+                                  onTap: () => onSelected(i),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (hasMore)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: _Orb(bg: bg, open: moreOpen, unread: unread, onTap: onMore),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Floating centre button that opens the "More" panel.
+class _Orb extends StatelessWidget {
+  const _Orb({required this.bg, required this.open, required this.unread, required this.onTap});
+  final Color bg;
+  final bool open;
+  final int unread;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget icon = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 240),
+      transitionBuilder: (child, anim) => RotationTransition(
+        turns: Tween<double>(begin: 0.75, end: 1).animate(anim),
+        child: ScaleTransition(scale: anim, child: child),
+      ),
+      child: Icon(
+        open ? Icons.close_rounded : Icons.apps_rounded,
+        key: ValueKey(open),
+        color: Colors.white,
+        size: 26,
+      ),
+    );
+    if (unread > 0 && !open) {
+      icon = Badge(label: Text(unread > 99 ? '99+' : '$unread'), backgroundColor: AppColors.red, child: icon);
+    }
+    return Semantics(
+      button: true,
+      label: 'More options',
+      child: Container(
+        width: _DockBar._orb + 8,
+        height: _DockBar._orb + 8,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF5B82FF), AppColors.brandDeep],
+            ),
+            boxShadow: [BoxShadow(color: AppColors.brand.withValues(alpha: 0.28), blurRadius: 10, offset: const Offset(0, 4))],
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              child: Center(child: icon),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DockItem extends StatelessWidget {
+  const _DockItem({required this.tab, required this.selected, required this.badge, required this.onTap});
+  final ShellTab tab;
+  final bool selected;
+  final int badge;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? AppColors.brand : AppColors.slate.withValues(alpha: 0.85);
+    Widget icon = AnimatedScale(
+      scale: selected ? 1.12 : 1,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutBack,
+      child: Icon(tab.icon, size: 23, color: color),
+    );
+    if (badge > 0) {
+      icon = Badge(label: Text('$badge'), backgroundColor: AppColors.red, child: icon);
+    }
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: tab.label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            icon,
+            const SizedBox(height: 3),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 220),
+              style: TextStyle(
+                fontSize: 10,
+                letterSpacing: -0.1,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                color: color,
+              ),
+              child: Text(tab.label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// "More" bottom panel
+// ---------------------------------------------------------------------------
+
+class _MoreSheet extends StatelessWidget {
+  const _MoreSheet({required this.items, required this.onItem, required this.onLogout});
+  final List<ShellDrawerItem> items;
+  final ValueChanged<ShellDrawerItem> onItem;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthController>();
+    final unread = context.select<NotificationsController, int>((c) => c.unread);
+    final user = auth.user;
+    final school = auth.school;
+
+    String role = 'User';
+    if (user != null) {
+      if (user.isDriver) {
+        role = 'Driver';
+      } else if (user.isHelper) {
+        role = 'Helper';
+      } else if (user.isParent) {
+        role = 'Parent';
+      } else {
+        role = user.role.replaceAll('_', ' ');
+      }
+    }
+    final initial = (user?.fullName.isNotEmpty == true) ? user!.fullName.characters.first.toUpperCase() : '?';
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 30, offset: const Offset(0, 10))],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Profile header
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.ink, Color(0xFF1B2A6B), AppColors.brand],
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(4)),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.16),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+                          ),
+                          child: Text(initial, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user?.fullName ?? 'SafeRoute',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(20)),
+                                    child: Text(
+                                      role.toUpperCase(),
+                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: Colors.white),
+                                    ),
+                                  ),
+                                  if (school != null) ...[
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        school.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.82)),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              if (hasOrb)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Semantics(
-                      button: true,
-                      label: 'More',
-                      child: GestureDetector(
-                        onTap: onMore,
-                        child: Container(
-                          width: _orb + 8,
-                          height: _orb + 8,
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const RadialGradient(
-                                center: Alignment(-0.35, -0.45),
-                                radius: 1.0,
-                                colors: [Color(0xFF8FB0FF), AppColors.brand, Color(0xFF1536B8)],
-                                stops: [0.0, 0.55, 1.0],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4, bottom: 10),
+                      child: Text(
+                        'QUICK ACCESS',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: AppColors.slate),
+                      ),
+                    ),
+                    LayoutBuilder(
+                      builder: (context, box) {
+                        const spacing = 10.0;
+                        final w = (box.maxWidth - spacing) / 2;
+                        return Wrap(
+                          spacing: spacing,
+                          runSpacing: spacing,
+                          children: [
+                            for (var i = 0; i < items.length; i++)
+                              SizedBox(
+                                width: w,
+                                child: SrFadeIn(
+                                  delay: Duration(milliseconds: 40 * i),
+                                  duration: const Duration(milliseconds: 360),
+                                  offset: 16,
+                                  child: _MoreTile(item: items[i], unread: unread, onTap: () => onItem(items[i])),
+                                ),
                               ),
-                              boxShadow: [
-                                BoxShadow(color: AppColors.brand.withValues(alpha: 0.45), blurRadius: 16, offset: const Offset(0, 6)),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    SrFadeIn(
+                      delay: Duration(milliseconds: 40 * items.length + 40),
+                      duration: const Duration(milliseconds: 360),
+                      offset: 16,
+                      child: Material(
+                        color: AppColors.red.withValues(alpha: 0.09),
+                        borderRadius: BorderRadius.circular(18),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: onLogout,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 14),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.logout_rounded, color: AppColors.red, size: 20),
+                                SizedBox(width: 10),
+                                Text('Log out', style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w800, fontSize: 15)),
                               ],
-                            ),
-                            child: Center(
-                              child: unread > 0
-                                  ? Badge(
-                                      label: Text('$unread'),
-                                      backgroundColor: AppColors.red,
-                                      child: const Icon(Icons.apps_rounded, color: Colors.white, size: 28),
-                                    )
-                                  : const Icon(Icons.apps_rounded, color: Colors.white, size: 28),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
+              ),
             ],
           ),
         ),
@@ -481,42 +689,54 @@ class _FloatingNavBar extends StatelessWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
-  const _NavItem({required this.tab, required this.selected, required this.badge, required this.onTap});
-  final ShellTab tab;
-  final bool selected;
-  final int badge;
+class _MoreTile extends StatelessWidget {
+  const _MoreTile({required this.item, required this.unread, required this.onTap});
+  final ShellDrawerItem item;
+  final int unread;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? Colors.white : Colors.white.withValues(alpha: 0.55);
-    Widget icon = Icon(tab.icon, size: 23, color: color);
-    if (badge > 0) {
-      icon = Badge(label: Text('$badge'), backgroundColor: AppColors.red, child: icon);
-    }
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(26),
-      child: Center(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-          decoration: BoxDecoration(
-            color: selected ? Colors.white.withValues(alpha: 0.14) : Colors.transparent,
-            borderRadius: BorderRadius.circular(22),
-          ),
+    final destructive = item.isDestructive;
+    final accent = destructive ? AppColors.red : AppColors.brand;
+    final badge = item.badgeCount ?? (item.label.toLowerCase().contains('alert') ? unread : 0);
+    return Material(
+      color: destructive ? AppColors.red.withValues(alpha: 0.08) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: destructive ? AppColors.red.withValues(alpha: 0.25) : AppColors.border),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              icon,
-              const SizedBox(height: 3),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
+                    child: Icon(item.icon, color: accent, size: 22),
+                  ),
+                  if (badge > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(color: AppColors.red, borderRadius: BorderRadius.circular(10)),
+                      child: Text('$badge', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
               Text(
-                tab.label,
+                item.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 10.5, fontWeight: selected ? FontWeight.w800 : FontWeight.w500, color: color, letterSpacing: -0.1),
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5, color: destructive ? AppColors.red : AppColors.ink),
               ),
             ],
           ),

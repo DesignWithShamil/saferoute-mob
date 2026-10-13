@@ -46,6 +46,24 @@ class SafeRouteApp extends StatelessWidget {
         navigatorKey: services.navigatorKey,
         scaffoldMessengerKey: services.messengerKey,
         theme: SafeRouteTheme.light(),
+        builder: (context, child) {
+          // Keep layouts intact on very large system font sizes and
+          // stop content stretching edge-to-edge on tablets.
+          final mq = MediaQuery.of(context);
+          final scaler = mq.textScaler.clamp(minScaleFactor: 0.9, maxScaleFactor: 1.15);
+          return MediaQuery(
+            data: mq.copyWith(textScaler: scaler),
+            child: ColoredBox(
+              color: AppColors.bg,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          );
+        },
         home: const _PushBridge(child: _RoleGate()),
       ),
     );

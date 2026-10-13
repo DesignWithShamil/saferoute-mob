@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/api/api_exception.dart';
 import '../../models/leave.dart';
 import '../../providers/parent_controller.dart';
+import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 import 'parent_widgets.dart';
 
@@ -63,12 +64,13 @@ class _ParentLeavesScreenState extends State<ParentLeavesScreen> {
       children: [
         const Padding(padding: EdgeInsets.fromLTRB(16, 12, 16, 0), child: SelectedChildHeader()),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
           child: Align(
             alignment: Alignment.centerRight,
             child: FilledButton.icon(
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
               onPressed: child.canApplyLeave ? () => _openForm() : null,
-              icon: const Icon(Icons.add),
+              icon: const Icon(Icons.add_rounded),
               label: const Text('Apply leave'),
             ),
           ),
@@ -92,20 +94,60 @@ class _ParentLeavesScreenState extends State<ParentLeavesScreen> {
               return RefreshIndicator(
                 onRefresh: () async => _reload(),
                 child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
                   itemCount: rows.length,
                   itemBuilder: (context, i) {
                     final leave = rows[i];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: ListTile(
-                        title: Text('${leave.startDate} to ${leave.endDate}'),
-                        subtitle: Text([
-                          LeaveType.label(leave.leaveType),
-                          if (leave.reason.isNotEmpty) leave.reason,
-                        ].join(' · ')),
-                        trailing: StatusChip(label: leave.status, color: AppColors.forStatus(leave.status)),
-                        onTap: leave.isUpcoming ? () => _openForm(leave) : null,
+                    return SrFadeIn(
+                      delay: Duration(milliseconds: 40 * (i > 8 ? 8 : i)),
+                      child: Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: leave.isUpcoming ? () => _openForm(leave) : null,
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.brand.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: const Icon(Icons.event_note_outlined, size: 22, color: AppColors.brand),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${leave.startDate} to ${leave.endDate}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        [
+                                          LeaveType.label(leave.leaveType),
+                                          if (leave.reason.isNotEmpty) leave.reason,
+                                        ].join(' · '),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 12, color: AppColors.slate),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                StatusChip(label: leave.status, color: AppColors.forStatus(leave.status)),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     );
                   },
@@ -214,6 +256,44 @@ class _LeaveFormState extends State<_LeaveForm> {
     }
   }
 
+  Widget _dateTile(String label, DateTime value, VoidCallback onTap) {
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 56),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label, style: const TextStyle(fontSize: 12, color: AppColors.slate)),
+                      const SizedBox(height: 2),
+                      Text(
+                        _ymd(value),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.calendar_today_outlined, size: 20, color: AppColors.brand),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -225,13 +305,18 @@ class _LeaveFormState extends State<_LeaveForm> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         children: [
-          Text('For ${widget.childLabel}', style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(
+            'For ${widget.childLabel}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.ink),
+          ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             initialValue: _type,
-            decoration: const InputDecoration(labelText: 'Leave type', border: OutlineInputBorder()),
+            decoration: const InputDecoration(labelText: 'Leave type'),
             items: const [
               DropdownMenuItem(value: LeaveType.fullDay, child: Text('Full day')),
               DropdownMenuItem(value: LeaveType.morning, child: Text('Morning only')),
@@ -239,29 +324,19 @@ class _LeaveFormState extends State<_LeaveForm> {
             ],
             onChanged: (v) => setState(() => _type = v ?? LeaveType.fullDay),
           ),
+          const SizedBox(height: 14),
+          _dateTile('Start date', _start, () => _pick(true)),
           const SizedBox(height: 12),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Start date'),
-            subtitle: Text(_ymd(_start)),
-            trailing: const Icon(Icons.calendar_today_outlined),
-            onTap: () => _pick(true),
-          ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('End date'),
-            subtitle: Text(_ymd(_end)),
-            trailing: const Icon(Icons.calendar_today_outlined),
-            onTap: () => _pick(false),
-          ),
+          _dateTile('End date', _end, () => _pick(false)),
+          const SizedBox(height: 14),
           TextField(
             controller: _reason,
             maxLines: 3,
-            decoration: const InputDecoration(labelText: 'Reason (optional)', border: OutlineInputBorder()),
+            decoration: const InputDecoration(labelText: 'Reason (optional)'),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(color: AppColors.red)),
+            Text(_error!, style: const TextStyle(fontSize: 14, color: AppColors.red)),
           ],
           const SizedBox(height: 16),
           FilledButton(onPressed: _busy ? null : _save, child: Text(_busy ? 'Saving…' : 'Submit leave')),

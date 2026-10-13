@@ -46,26 +46,65 @@ class _OperatorRouteMapScreenState extends State<OperatorRouteMapScreen> {
           ),
     ];
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
       children: [
         if (c.routes.length > 1)
           DropdownButtonFormField<String>(
             initialValue: route.publicId,
-            decoration: const InputDecoration(labelText: 'Route', border: OutlineInputBorder()),
-            items: [for (final r in c.routes) DropdownMenuItem(value: r.publicId, child: Text(r.name))],
+            isExpanded: true,
+            borderRadius: BorderRadius.circular(20),
+            dropdownColor: Colors.white,
+            elevation: 6,
+            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.brand),
+            decoration: const InputDecoration(labelText: 'Route', prefixIcon: Icon(Icons.alt_route_rounded)),
+            selectedItemBuilder: (context) => [
+              for (final r in c.routes)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(r.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+                ),
+            ],
+            items: [
+              for (final r in c.routes)
+                DropdownMenuItem(
+                  value: r.publicId,
+                  child: Text(r.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+                ),
+            ],
             onChanged: (v) => setState(() => _routeId = v),
           ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
+        const SizedBox(height: 12),
+        Row(
           children: [
-            ChoiceChip(label: const Text('Morning'), selected: _morning, onSelected: (_) => setState(() => _morning = true)),
-            ChoiceChip(label: const Text('Evening'), selected: !_morning, onSelected: (_) => setState(() => _morning = false)),
+            Expanded(
+              child: ChoiceChip(
+                avatar: const Icon(Icons.wb_sunny_rounded, size: 18),
+                label: const SizedBox(width: double.infinity, child: Text('Morning', textAlign: TextAlign.center)),
+                selected: _morning,
+                onSelected: (_) => setState(() => _morning = true),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ChoiceChip(
+                avatar: const Icon(Icons.nights_stay_rounded, size: 18),
+                label: const SizedBox(width: double.infinity, child: Text('Evening', textAlign: TextAlign.center)),
+                selected: !_morning,
+                onSelected: (_) => setState(() => _morning = false),
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 12),
-        Text('${route.name}${route.bus != null ? ' · Bus ${route.bus!.busNumber}' : ''}'),
-        const SizedBox(height: 8),
+        const SizedBox(height: 14),
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 10),
+          child: Text(
+            '${route.name}${route.bus != null ? ' · Bus ${route.bus!.busNumber}' : ''}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.slate),
+          ),
+        ),
         TripMap(
           stops: stops,
           places: [?schoolPlace(context.watch<AuthController>().school)],
@@ -80,7 +119,13 @@ class _OperatorRouteMapScreenState extends State<OperatorRouteMapScreen> {
                 ListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
-                  title: Text('${s.sequence}. ${s.name}'),
+                  leading: CircleAvatar(
+                    radius: 15,
+                    backgroundColor: AppColors.brand.withValues(alpha: 0.12),
+                    foregroundColor: AppColors.brand,
+                    child: Text('${s.sequence}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+                  ),
+                  title: Text(s.name, maxLines: 2, overflow: TextOverflow.ellipsis),
                   subtitle: Text(_morning ? (s.pickupTime ?? '—') : (s.dropTime ?? '—')),
                 ),
             ],

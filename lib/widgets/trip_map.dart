@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../core/config/env.dart';
+import '../core/location/location_service.dart';
 import '../core/utils/geo.dart';
 import '../models/trip.dart';
 import '../models/user.dart';
@@ -110,6 +113,8 @@ class _TripMapState extends State<TripMap> {
   final _controller = MapController();
   late bool _follow = widget.followBusByDefault;
   bool _ready = false;
+  LatLng? _me;
+  bool _locating = false;
 
   @override
   void didUpdateWidget(covariant TripMap oldWidget) {
@@ -140,6 +145,39 @@ class _TripMapState extends State<TripMap> {
   /// Extra room on the right and bottom keeps markers clear of the map
   /// buttons and the attribution strip.
   static const _fitPadding = EdgeInsets.fromLTRB(40, 48, 80, 72);
+
+  /// View-only: shows where this phone is right now and centres the map on it.
+  Future<void> _locateMe() async {
+    if (_locating) return;
+    HapticFeedback.selectionClick();
+    setState(() => _locating = true);
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        if (mounted) showSnack(context, 'Turn on your phone\'s location (GPS) to see your live position.', error: true);
+        return;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        if (mounted) showSnack(context, 'Location permission is needed to show your live position.', error: true);
+        return;
+      }
+      final fix = await LocationService().currentPosition();
+      if (!mounted) return;
+      if (fix == null) {
+        showSnack(context, 'Could not get your location yet. Try again in a moment.', error: true);
+        return;
+      }
+      final me = LatLng(fix.latitude, fix.longitude);
+      setState(() {
+        _me = me;
+        _follow = false;
+      });
+      _controller.move(me, _controller.camera.zoom < 15 ? 16 : _controller.camera.zoom);
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
 
   void _zoom(double delta) {
     final camera = _controller.camera;
@@ -191,8 +229,15 @@ class _TripMapState extends State<TripMap> {
     final (done, remaining) = fallback ? (const <LatLng>[], path) : _splitPath(path);
     final current = widget.stops.where((s) => s.isCurrent).firstOrNull;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border, width: 1.5),
+        boxShadow: [BoxShadow(color: AppColors.ink.withValues(alpha: 0.08), blurRadius: 18, offset: const Offset(0, 8))],
+      ),
+      child: ClipRRect(
+      borderRadius: BorderRadius.circular(22.5),
       child: SizedBox(
         height: height,
         child: Stack(
@@ -264,6 +309,13 @@ class _TripMapState extends State<TripMap> {
                         child: _StopMarker(stop: s),
                       ),
                     ),
+                  if (_me != null)
+                    Marker(
+                      point: _me!,
+                      width: 48,
+                      height: 48,
+                      child: const _MeMarker(),
+                    ),
                   if (widget.bus != null)
                     Marker(
                       point: widget.bus!,
@@ -278,48 +330,64 @@ class _TripMapState extends State<TripMap> {
                       ),
                     ),
                 ]),
-                const SimpleAttributionWidget(source: Text('OpenStreetMap contributors')),
+                const SimpleAttributionWidget(
+                  source: Text('OpenStreetMap contributors', style: TextStyle(fontSize: 10)),
+                  backgroundColor: Color(0xCCFFFFFF),
+                ),
               ],
             ),
             Positioned(
-              right: 8,
-              top: 8,
+              right: 10,
+              top: 10,
               child: Column(
                 children: [
+                  _MapButton(
+                    icon: Icons.my_location_rounded,
+                    tooltip: 'Show my live location',
+                    busy: _locating,
+                    highlighted: _me != null,
+                    onPressed: _locateMe,
+                  ),
                   if (widget.bus != null) ...[
+                    const SizedBox(height: 8),
                     _MapButton(
-                      icon: _follow ? Icons.my_location : Icons.location_searching,
+                      icon: Icons.directions_bus_rounded,
                       tooltip: _follow ? 'Following bus' : 'Go to bus location',
+                      highlighted: _follow,
                       onPressed: () {
                         setState(() => _follow = true);
                         _controller.move(widget.bus!, _controller.camera.zoom < 14 ? 15 : _controller.camera.zoom);
                       },
                     ),
-                    const SizedBox(height: 6),
                   ],
+                  const SizedBox(height: 8),
                   _MapButton(
-                    icon: Icons.fit_screen_outlined,
+                    icon: Icons.fit_screen_rounded,
                     tooltip: 'Show whole route',
                     onPressed: () {
                       setState(() => _follow = false);
                       _fitAll();
                     },
                   ),
-                  const SizedBox(height: 6),
-                  _MapButton(icon: Icons.add, tooltip: 'Zoom in', onPressed: () => _zoom(1)),
-                  const SizedBox(height: 6),
-                  _MapButton(icon: Icons.remove, tooltip: 'Zoom out', onPressed: () => _zoom(-1)),
+                  if (height >= 300) ...[
+                    const SizedBox(height: 8),
+                    _MapButton(icon: Icons.add_rounded, tooltip: 'Zoom in', onPressed: () => _zoom(1)),
+                    const SizedBox(height: 8),
+                    _MapButton(icon: Icons.remove_rounded, tooltip: 'Zoom out', onPressed: () => _zoom(-1)),
+                  ],
                 ],
               ),
             ),
             if (fallback)
               const Positioned(
-                left: 8,
-                top: 8,
+                left: 10,
+                top: 10,
+                right: 64,
                 child: _MapNote(text: 'Road route unavailable – dashed line joins stops in order'),
               ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -439,27 +507,64 @@ class _BusMarker extends StatelessWidget {
 }
 
 class _MapButton extends StatelessWidget {
-  const _MapButton({required this.icon, required this.tooltip, required this.onPressed});
+  const _MapButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.busy = false,
+    this.highlighted = false,
+  });
   final IconData icon;
   final String tooltip;
   final VoidCallback onPressed;
+  final bool busy;
+  final bool highlighted;
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: Colors.white,
-        elevation: 2,
-        shape: const CircleBorder(),
-        child: IconButton(
-          icon: Icon(icon, size: 20),
-          tooltip: tooltip,
-          onPressed: onPressed,
-          style: IconButton.styleFrom(
-            minimumSize: const Size(40, 40),
-            fixedSize: const Size(40, 40),
-            padding: EdgeInsets.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  Widget build(BuildContext context) => Tooltip(
+        message: tooltip,
+        child: Material(
+          color: highlighted ? AppColors.brand : Colors.white,
+          elevation: 3,
+          shadowColor: Colors.black38,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: busy ? null : onPressed,
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: Center(
+                child: busy
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.4))
+                    : Icon(icon, size: 21, color: highlighted ? Colors.white : AppColors.ink),
+              ),
+            ),
           ),
         ),
+      );
+}
+
+/// Blue "you are here" dot with a soft halo.
+class _MeMarker extends StatelessWidget {
+  const _MeMarker();
+
+  @override
+  Widget build(BuildContext context) => Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(width: 48, height: 48, decoration: BoxDecoration(color: AppColors.brand.withValues(alpha: 0.18), shape: BoxShape.circle)),
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E88FF),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: const [BoxShadow(blurRadius: 6, color: Colors.black38)],
+            ),
+          ),
+        ],
       );
 }
 

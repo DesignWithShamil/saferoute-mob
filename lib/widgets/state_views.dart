@@ -172,7 +172,8 @@ class SectionCard extends StatelessWidget {
   final EdgeInsets padding;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => _EnterAnimation(
+        child: Card(
         margin: const EdgeInsets.only(bottom: 14),
         clipBehavior: Clip.antiAlias,
         child: Padding(
@@ -199,6 +200,25 @@ class SectionCard extends StatelessWidget {
             ],
           ),
         ),
+        ),
+      );
+}
+
+/// Subtle fade / rise the first time a card appears.
+class _EnterAnimation extends StatelessWidget {
+  const _EnterAnimation({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
+        builder: (context, t, child) => Opacity(
+          opacity: t,
+          child: Transform.translate(offset: Offset(0, (1 - t) * 14), child: child),
+        ),
+        child: child,
       );
 }
 

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1027827882337",
+    "project_id": "saferoutez",
+    "storage_bucket": "saferoutez.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1027827882337:android:c7d9e03b88f499c4d48d20",
+        "android_client_info": {
+          "package_name": "com.saferoute"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJODJKNttg56-qBvcMAQTpSFusTIMgnd8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

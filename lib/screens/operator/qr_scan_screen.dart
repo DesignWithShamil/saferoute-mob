@@ -69,26 +69,39 @@ class _QrScanScreenState extends State<QrScanScreen> {
               ),
             ),
           ),
-          Container(
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            color: result == null
-                ? Theme.of(context).colorScheme.surfaceContainerHighest
-                : (result.$2 ? AppColors.red : AppColors.green).withValues(alpha: 0.12),
+            margin: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            constraints: const BoxConstraints(minHeight: 56),
+            decoration: BoxDecoration(
+              color: result == null
+                  ? Theme.of(context).colorScheme.surfaceContainerHighest
+                  : (result.$2 ? AppColors.red : AppColors.green).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: result == null ? AppColors.border : (result.$2 ? AppColors.red : AppColors.green).withValues(alpha: 0.35),
+              ),
+            ),
             child: Row(
               children: [
                 if (_busy)
-                  const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5))
                 else
                   Icon(
                     result == null ? Icons.qr_code_scanner : (result.$2 ? Icons.error_outline : Icons.check_circle),
-                    color: result == null ? null : (result.$2 ? AppColors.red : AppColors.green),
+                    size: 24,
+                    color: result == null ? AppColors.slate : (result.$2 ? AppColors.red : AppColors.green),
                   ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     _busy ? 'Recording…' : (result?.$1 ?? 'Point the camera at a student\'s QR card.'),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink, height: 1.3),
                   ),
                 ),
               ],

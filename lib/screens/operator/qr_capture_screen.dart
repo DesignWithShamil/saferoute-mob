@@ -52,9 +52,27 @@ class _QrCaptureScreenState extends State<QrCaptureScreen> {
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('Point the camera at a student\'s QR card.'),
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.brand.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.qr_code_scanner, color: AppColors.brand, size: 24),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Point the camera at a student\'s QR card.',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

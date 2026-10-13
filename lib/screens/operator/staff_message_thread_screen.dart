@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../app_services.dart';
 import '../../core/api/api_exception.dart';
 import '../../models/staff_message.dart';
+import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 
 /// View-only inbox: announcements from school admin (drivers/helpers cannot reply).
@@ -167,7 +168,7 @@ class _StaffMessageThreadScreenState extends State<StaffMessageThreadScreen> {
                             child: ListView.builder(
                               controller: _scroll,
                               physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                               itemCount: _messages.length + 1,
                               itemBuilder: (context, i) {
                                 if (i == 0) {
@@ -183,7 +184,11 @@ class _StaffMessageThreadScreenState extends State<StaffMessageThreadScreen> {
                                     ),
                                   );
                                 }
-                                return _AnnouncementCard(message: _messages[i - 1]);
+                                return SrFadeIn(
+                                  delay: Duration(milliseconds: (i < 8 ? i : 8) * 40),
+                                  offset: 14,
+                                  child: _AnnouncementCard(message: _messages[i - 1]),
+                                );
                               },
                             ),
                           ),
@@ -222,7 +227,7 @@ class _FilterBar extends StatelessWidget {
     return Material(
       color: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
         child: Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -246,8 +251,8 @@ class _FilterBar extends StatelessWidget {
                 },
               ),
             ),
-            OutlinedButton.icon(onPressed: onPickFrom, icon: const Icon(Icons.calendar_today, size: 16), label: Text(df, style: const TextStyle(fontSize: 12))),
-            OutlinedButton.icon(onPressed: onPickTo, icon: const Icon(Icons.calendar_today, size: 16), label: Text(dt, style: const TextStyle(fontSize: 12))),
+            OutlinedButton.icon(onPressed: onPickFrom, icon: const Icon(Icons.calendar_today, size: 16), label: Text(df, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+            OutlinedButton.icon(onPressed: onPickTo, icon: const Icon(Icons.calendar_today, size: 16), label: Text(dt, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
             TextButton(onPressed: onClearFilters, child: const Text('Clear filters')),
           ],
         ),
@@ -278,7 +283,7 @@ class _AnnouncementsHeader extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(14)),
             child: const Icon(Icons.campaign_outlined, color: Colors.white, size: 26),
           ),
           const SizedBox(width: 12),
@@ -286,10 +291,17 @@ class _AnnouncementsHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('School announcements', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800)),
+                Text(
+                  'School announcements',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17),
+                ),
                 if (readOnly)
                   Text(
                     'Read only — no replies',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white.withValues(alpha: 0.9)),
                   ),
               ],
@@ -297,7 +309,7 @@ class _AnnouncementsHeader extends StatelessWidget {
           ),
           TextButton(
             onPressed: clearing ? null : onClearInbox,
-            style: TextButton.styleFrom(foregroundColor: Colors.white, side: BorderSide(color: Colors.white.withValues(alpha: 0.5))),
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), foregroundColor: Colors.white, side: BorderSide(color: Colors.white.withValues(alpha: 0.5))),
             child: Text(clearing ? '…' : 'Clear inbox'),
           ),
         ],
@@ -323,7 +335,7 @@ class _EmptyAnnouncements extends StatelessWidget {
           Text(
             'No announcements yet',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.ink),
           ),
           const SizedBox(height: 8),
           Padding(
@@ -349,7 +361,7 @@ class _AnnouncementCard extends StatelessWidget {
     final time = message.createdAt != null ? DateFormat('d MMM y · h:mm a').format(message.createdAt!) : '';
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -362,7 +374,7 @@ class _AnnouncementCard extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: AppColors.brand.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: AppColors.brand.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14)),
             child: const Icon(Icons.notifications_active_outlined, color: AppColors.brand, size: 22),
           ),
           const SizedBox(width: 12),
@@ -370,20 +382,20 @@ class _AnnouncementCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(message.sender?.fullName ?? 'School admin', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.brand)),
+                Text(message.sender?.fullName ?? 'School admin', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.brand)),
                 if (message.audienceLabel != null) ...[
                   const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(color: AppColors.slate.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
-                    child: Text(message.audienceLabel!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.slate)),
+                    child: Text(message.audienceLabel!, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate)),
                   ),
                 ],
                 const SizedBox(height: 8),
-                Text(message.body, style: const TextStyle(color: AppColors.slate, height: 1.45, fontSize: 15)),
+                Text(message.body, style: const TextStyle(color: AppColors.ink, height: 1.45, fontSize: 14)),
                 if (time.isNotEmpty) ...[
                   const SizedBox(height: 10),
-                  Text(time, style: TextStyle(fontSize: 11, color: AppColors.slate.withValues(alpha: 0.65))),
+                  Text(time, style: TextStyle(fontSize: 12, color: AppColors.slate.withValues(alpha: 0.75))),
                 ],
               ],
             ),

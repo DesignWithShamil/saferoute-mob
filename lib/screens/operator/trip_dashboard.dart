@@ -10,6 +10,7 @@ import '../../models/transport.dart';
 import '../../models/trip.dart';
 import '../../providers/auth_controller.dart';
 import '../../providers/operator_trip_controller.dart';
+import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 import '../../widgets/trip_map.dart';
 import 'attendance_roster.dart';
@@ -72,7 +73,7 @@ class _TripDashboardState extends State<TripDashboard> with WidgetsBindingObserv
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
-          _DateHeader(),
+          SrClockHeader(name: context.read<AuthController>().user?.fullName),
           if (c.loadError != null) _InlineError(message: c.loadError!),
           if (trip != null && trip.isActive)
             _ActiveTrip(trip: trip)
@@ -85,17 +86,6 @@ class _TripDashboardState extends State<TripDashboard> with WidgetsBindingObserv
       ),
     );
   }
-}
-
-class _DateHeader extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Text(
-          DateFormat('EEEE, d MMMM y').format(DateTime.now()),
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppColors.slate),
-        ),
-      );
 }
 
 class _InlineError extends StatelessWidget {
@@ -122,10 +112,12 @@ class _RouteSelector extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Wrap(
         spacing: 8,
+        runSpacing: 8,
         children: [
           for (final r in c.routes)
             ChoiceChip(
-              label: Text(r.name),
+              label: Text(r.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+              materialTapTargetSize: MaterialTapTargetSize.padded,
               selected: r.publicId == c.selectedRoute?.publicId,
               onSelected: (_) => c.selectRoute(r.publicId),
             ),
@@ -140,14 +132,39 @@ class _RouteSummary extends StatelessWidget {
   final RouteInfo route;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: const CircleAvatar(child: Icon(Icons.alt_route)),
-        title: Text(route.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text([
-          if (route.bus != null) 'Bus ${route.bus!.busNumber}',
-          '${route.stops.length} stops',
-        ].join(' · ')),
+  Widget build(BuildContext context) => Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: AppColors.brand.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14)),
+            child: const Icon(Icons.alt_route, color: AppColors.brand, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  route.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink, letterSpacing: -0.2),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  [
+                    if (route.bus != null) 'Bus ${route.bus!.busNumber}',
+                    '${route.stops.length} stops',
+                  ].join(' · '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, color: AppColors.slate),
+                ),
+              ],
+            ),
+          ),
+        ],
       );
 }
 
@@ -335,15 +352,37 @@ class _FinishedToday extends StatelessWidget {
         child: Column(
           children: [
             for (final t in trips)
-              ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                title: Text('${t.routeName} · ${TripType.label(t.tripType)}'),
-                subtitle: Text([
-                  if (t.startedAt != null) DateFormat.jm().format(t.startedAt!),
-                  if (t.endedAt != null) DateFormat.jm().format(t.endedAt!),
-                ].join(' – ')),
-                trailing: StatusChip(label: TripStatus.label(t.status), color: AppColors.forStatus(t.status)),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${t.routeName} · ${TripType.label(t.tripType)}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            [
+                              if (t.startedAt != null) DateFormat.jm().format(t.startedAt!),
+                              if (t.endedAt != null) DateFormat.jm().format(t.endedAt!),
+                            ].join(' – '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12, color: AppColors.slate),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    StatusChip(label: TripStatus.label(t.status), color: AppColors.forStatus(t.status)),
+                  ],
+                ),
               ),
           ],
         ),
@@ -550,9 +589,9 @@ class _UpcomingStopsBar extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('Upcoming stops', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-              const Spacer(),
+              const Expanded(child: Text('Upcoming stops', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink))),
               TextButton(
+                style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                   builder: (_) => ChangeNotifierProvider.value(value: controller, child: const TripStopsScreen()),
                 )),
@@ -561,7 +600,7 @@ class _UpcomingStopsBar extends StatelessWidget {
             ],
           ),
           SizedBox(
-            height: 72,
+            height: 84,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: upcoming.length,
@@ -583,18 +622,18 @@ class _UpcomingStopsBar extends StatelessWidget {
                       builder: (_) => ChangeNotifierProvider.value(value: controller, child: const TripStopsScreen()),
                     )),
                     child: Container(
-                      width: 132,
-                      padding: const EdgeInsets.all(10),
+                      width: 140,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             isNext ? 'Next' : '#${ts.sequence}',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isNext ? AppColors.amber : AppColors.slate),
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: isNext ? AppColors.amber : AppColors.slate),
                           ),
-                          Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, height: 1.2)),
-                          Text('$n child${n == 1 ? '' : 'ren'}', style: Theme.of(context).textTheme.labelSmall),
+                          Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink, height: 1.2)),
+                          Text('$n child${n == 1 ? '' : 'ren'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.slate)),
                         ],
                       ),
                     ),
@@ -628,22 +667,33 @@ class _NextStopCard extends StatelessWidget {
     final n = c.rosterAtCurrentStop.length;
     return SectionCard(
       title: tripStop?.status == TripStopStatus.arrived ? 'At stop' : 'Next stop',
-      trailing: Text(
-        [if (n > 0) '$n student${n == 1 ? '' : 's'}', ?distance].whereType<String>().join(' · '),
-        style: const TextStyle(fontWeight: FontWeight.w600),
+      trailing: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.5),
+        child: Text(
+          [if (n > 0) '$n student${n == 1 ? '' : 's'}', ?distance].whereType<String>().join(' · '),
+          maxLines: 2,
+          textAlign: TextAlign.end,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.slate),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(stop.name, style: Theme.of(context).textTheme.titleLarge),
-          if (stop.address.isNotEmpty) Text(stop.address, style: Theme.of(context).textTheme.bodySmall),
+          Text(stop.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.ink, letterSpacing: -0.3)),
+          if (stop.address.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(stop.address, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: AppColors.slate)),
+            ),
           const SizedBox(height: 12),
           FilledButton.tonalIcon(
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => ChangeNotifierProvider.value(value: c, child: const TripRosterScreen()),
             )),
             icon: const Icon(Icons.groups_outlined),
-            label: Text(n > 0 ? 'View $n student${n == 1 ? '' : 's'} at this stop' : 'Open student roster'),
+            label: Text(n > 0 ? 'View $n student${n == 1 ? '' : 's'} at this stop' : 'Open student roster', maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
         ],
       ),
@@ -676,7 +726,7 @@ class _TripControls extends StatelessWidget {
           child: ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.hourglass_top),
-            title: Text('Waiting for the driver to start driving'),
+            title: Text('Waiting for the driver to start driving', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink)),
           ),
         );
       }
@@ -697,7 +747,7 @@ class _TripControls extends StatelessWidget {
                             destructive: true);
                         if (ok) await run(() => c.cancelTrip('Driver cancelled before starting.'));
                       },
-                child: const Text('BACK / CANCEL'),
+                child: const Text('BACK / CANCEL', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w800)),
               ),
             ),
             const SizedBox(width: 12),
@@ -731,7 +781,14 @@ class _TripControls extends StatelessWidget {
                 children: [
                   const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
                   const SizedBox(width: 10),
-                  Text(arrived ? 'Auto-detecting departure…' : 'Auto-detecting arrival…'),
+                  Flexible(
+                    child: Text(
+                      arrived ? 'Auto-detecting departure…' : 'Auto-detecting arrival…',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -752,8 +809,8 @@ class _TripControls extends StatelessWidget {
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(Icons.flag_outlined),
-          title: Text('All stops done'),
-          subtitle: Text('The driver will end the trip.'),
+          title: Text('All stops done', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink)),
+          subtitle: Text('The driver will end the trip.', style: TextStyle(fontSize: 12, color: AppColors.slate)),
         ),
       );
     }
@@ -777,7 +834,8 @@ Future<void> _showDelayDialog(BuildContext context, OperatorTripController c, Tr
   final sent = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Bus delay alert'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      title: const Text('Bus delay alert', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.ink)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -786,6 +844,7 @@ Future<void> _showDelayDialog(BuildContext context, OperatorTripController c, Tr
             trip.isMorning
                 ? 'Parents of students not yet picked up will be notified.'
                 : 'Parents of students not yet dropped will be notified.',
+            style: const TextStyle(fontSize: 14, height: 1.4, color: AppColors.slate),
           ),
           const SizedBox(height: 12),
           TextField(

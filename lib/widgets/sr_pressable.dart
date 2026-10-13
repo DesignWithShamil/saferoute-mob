@@ -7,7 +7,7 @@ class SrPressable extends StatefulWidget {
     required this.child,
     this.onTap,
     this.borderRadius = const BorderRadius.all(Radius.circular(12)),
-    this.pressedScale = 0.98,
+    this.pressedScale = 0.97,
   });
 
   final Widget child;
@@ -29,14 +29,19 @@ class _SrPressableState extends State<SrPressable> {
       onTapUp: widget.onTap == null ? null : (_) => setState(() => _pressed = false),
       onTapCancel: widget.onTap == null ? null : () => setState(() => _pressed = false),
       onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
       child: AnimatedScale(
         scale: _pressed ? widget.pressedScale : 1,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeOut,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: widget.borderRadius,
-          child: widget.child,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: AnimatedOpacity(
+          opacity: _pressed ? 0.92 : 1,
+          duration: const Duration(milliseconds: 120),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: widget.borderRadius,
+            child: widget.child,
+          ),
         ),
       ),
     );

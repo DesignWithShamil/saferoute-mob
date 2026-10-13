@@ -15,22 +15,31 @@ class TripHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(trip.routeName.isEmpty ? 'Route' : trip.routeName, style: theme.textTheme.titleLarge),
+              Text(
+                trip.routeName.isEmpty ? 'Route' : trip.routeName,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.ink, letterSpacing: -0.3),
+              ),
+              const SizedBox(height: 3),
               Text(
                 '${trip.bus?.busNumber ?? 'Bus'} · ${TripType.label(trip.tripType)} trip'
                 '${trip.startedAt != null ? ' · started ${DateFormat.jm().format(trip.startedAt!)}' : ''}',
-                style: theme.textTheme.bodyMedium,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13, color: AppColors.slate, height: 1.3),
               ),
             ],
           ),
         ),
+        const SizedBox(width: 10),
         StatusChip(label: TripStatus.label(trip.status), color: AppColors.forStatus(trip.status)),
       ],
     );
@@ -96,29 +105,44 @@ class _Banner extends StatelessWidget {
   final Widget? action;
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-                  if (detail != null) Text(detail!, style: Theme.of(context).textTheme.bodySmall),
-                ],
+  Widget build(BuildContext context) => AnimatedSize(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: EdgeInsets.fromLTRB(12, 10, action == null ? 14 : 6, 10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withValues(alpha: 0.28)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
+                child: Icon(icon, color: color, size: 20),
               ),
-            ),
-            ?action,
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 14, height: 1.3)),
+                    if (detail != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(detail!, style: const TextStyle(fontSize: 12, color: AppColors.slate)),
+                      ),
+                  ],
+                ),
+              ),
+              if (action != null) ...[const SizedBox(width: 4), action!],
+            ],
+          ),
         ),
       );
 }
@@ -134,25 +158,56 @@ class StopTimeline extends StatelessWidget {
     return Column(
       children: [
         for (final ts in trip.tripStops)
-          ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: CircleAvatar(
-              radius: 14,
-              backgroundColor: ts.stop?.publicId == currentId
-                  ? AppColors.amber
-                  : ts.status == TripStopStatus.departed
-                      ? AppColors.green
-                      : AppColors.slate.withValues(alpha: 0.2),
-              child: Text('${ts.sequence}', style: const TextStyle(fontSize: 12, color: Colors.white)),
-            ),
-            title: Text(ts.stop?.name ?? 'Stop'),
-            subtitle: Text([
+          Builder(builder: (context) {
+            final isCurrent = ts.stop?.publicId == currentId;
+            final dotColor = isCurrent
+                ? AppColors.amber
+                : ts.status == TripStopStatus.departed
+                    ? AppColors.green
+                    : AppColors.slate.withValues(alpha: 0.25);
+            final sub = [
               if (ts.arrivedAt != null) 'Arrived ${DateFormat.jm().format(ts.arrivedAt!)}',
               if (ts.departedAt != null) 'Departed ${DateFormat.jm().format(ts.departedAt!)}',
-            ].join(' · ')),
-            trailing: StatusChip(label: ts.status, color: AppColors.forStatus(ts.status)),
-          ),
+            ].join(' · ');
+            return Container(
+              constraints: const BoxConstraints(minHeight: 48),
+              margin: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: isCurrent ? AppColors.amber.withValues(alpha: 0.10) : Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+                    child: Text('${ts.sequence}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ts.stop?.name ?? 'Stop',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink),
+                        ),
+                        if (sub.isNotEmpty)
+                          Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.slate)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  StatusChip(label: ts.status, color: AppColors.forStatus(ts.status)),
+                ],
+              ),
+            );
+          }),
       ],
     );
   }

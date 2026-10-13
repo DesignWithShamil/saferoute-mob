@@ -52,19 +52,23 @@ class AttendanceRosterView extends StatelessWidget {
         for (final entry in groups.entries) ...[
           if (groupByStop && entry.value.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 4),
+              padding: const EdgeInsets.only(top: 10, bottom: 8),
               child: Row(
                 children: [
+                  const Icon(Icons.place_rounded, size: 18, color: AppColors.brand),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       entry.value.first.stop?.name ?? 'No stop assigned',
-                      style: Theme.of(context).textTheme.labelLarge,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.ink),
                     ),
                   ),
-                  CircleAvatar(
-                    radius: 12,
-                    backgroundColor: AppColors.brand.withValues(alpha: 0.15),
-                    child: Text('${entry.value.length}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(color: AppColors.brand.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+                    child: Text('${entry.value.length}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.brand)),
                   ),
                 ],
               ),
@@ -113,8 +117,8 @@ class _Counts extends StatelessWidget {
         for (final (label, value, color) in items)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
-            child: Text('$value $label', style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 11)),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(20)),
+            child: Text('$value $label', style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 11.5)),
           ),
       ],
     );
@@ -181,44 +185,89 @@ class _RosterRow extends StatelessWidget {
       ));
     }
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => showStudentDetailSheet(context, student: student, record: record),
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
+    final hint = dropLocationHint(record);
+    final details = [if (student.ageYears != null) '${student.ageYears} yrs', student.admissionNumber, student.classLabel]
+        .where((s) => s.isNotEmpty)
+        .join(' · ');
+    final showActions = !actionsInDetail && actions.isNotEmpty;
+    final initial = student.fullName.characters.firstOrNull?.toUpperCase() ?? '?';
+    final statusColor = AppColors.forStatus(record.status);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: const Color(0xFFF7F9FD),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => showStudentDetailSheet(context, student: student, record: record),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(student.fullName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    Text(
-                      [if (student.ageYears != null) '${student.ageYears} yrs', student.admissionNumber, student.classLabel]
-                          .where((s) => s.isNotEmpty)
-                          .join(' · '),
-                      style: Theme.of(context).textTheme.bodySmall,
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: statusColor.withValues(alpha: 0.14),
+                      foregroundColor: statusColor,
+                      child: Text(initial, style: const TextStyle(fontWeight: FontWeight.w800)),
                     ),
-                    if (dropLocationHint(record) != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          dropLocationHint(record)!,
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.brand),
-                        ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            student.fullName,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5, height: 1.2, color: AppColors.ink),
+                          ),
+                          if (details.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(details, style: Theme.of(context).textTheme.bodySmall),
+                          ],
+                          if (hint != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 3),
+                              child: Text(
+                                hint,
+                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.brand),
+                              ),
+                            ),
+                          const SizedBox(height: 8),
+                          StatusChip(label: AttendanceStatus.label(record.status), color: statusColor),
+                        ],
                       ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 10),
+                      child: Icon(Icons.chevron_right_rounded, color: AppColors.slate, size: 24),
+                    ),
                   ],
                 ),
-              ),
-              StatusChip(label: AttendanceStatus.label(record.status), color: AppColors.forStatus(record.status)),
-              if (!actionsInDetail && actions.isNotEmpty) ...[
-                const SizedBox(width: 6),
-                Wrap(spacing: 4, children: actions),
+                if (showActions) ...[
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < actions.length; i++) ...[
+                          if (i > 0) const SizedBox(width: 10),
+                          Expanded(child: actions[i]),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ],
-              const Icon(Icons.chevron_right, color: AppColors.slate, size: 20),
-            ],
+            ),
           ),
         ),
       ),
@@ -235,21 +284,50 @@ class _SmallButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = ButtonStyle(
-      visualDensity: VisualDensity.compact,
-      padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10)),
-      minimumSize: const WidgetStatePropertyAll(Size(0, 34)),
+    final shape = WidgetStatePropertyAll<OutlinedBorder>(RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)));
+    const size = WidgetStatePropertyAll(Size.fromHeight(44));
+    const pad = WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12));
+    const text = WidgetStatePropertyAll(TextStyle(fontSize: 14, fontWeight: FontWeight.w800));
+    final icon = switch (label) {
+      'Board' => Icons.check_rounded,
+      'Absent' => Icons.close_rounded,
+      'Drop' => Icons.logout_rounded,
+      _ => Icons.verified_user_outlined,
+    };
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18),
+        const SizedBox(width: 6),
+        Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
+      ],
     );
-    return filled
+    return filled || label == 'Board' || label == 'Drop'
         ? FilledButton(
-            style: style.copyWith(backgroundColor: WidgetStatePropertyAll(color)),
+            style: ButtonStyle(
+              shape: shape,
+              minimumSize: size,
+              padding: pad,
+              textStyle: text,
+              backgroundColor: WidgetStateProperty.resolveWith(
+                  (s) => s.contains(WidgetState.disabled) ? color.withValues(alpha: 0.3) : color),
+              foregroundColor: const WidgetStatePropertyAll(Colors.white),
+            ),
             onPressed: onPressed,
-            child: Text(label),
+            child: content,
           )
         : OutlinedButton(
-            style: style.copyWith(foregroundColor: WidgetStatePropertyAll(color)),
+            style: ButtonStyle(
+              shape: shape,
+              minimumSize: size,
+              padding: pad,
+              textStyle: text,
+              backgroundColor: WidgetStatePropertyAll(color.withValues(alpha: 0.08)),
+              foregroundColor: WidgetStatePropertyAll(color),
+              side: WidgetStatePropertyAll(BorderSide(color: color.withValues(alpha: 0.45))),
+            ),
             onPressed: onPressed,
-            child: Text(label),
+            child: content,
           );
   }
 }

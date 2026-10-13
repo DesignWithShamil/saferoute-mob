@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../providers/auth_controller.dart';
 import '../../providers/parent_controller.dart';
+import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 import '../notifications/notifications_screen.dart';
 import '../parent/add_child_screen.dart';
@@ -41,15 +43,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         title: 'Home',
         icon: Icons.home_outlined,
         body: const _HomeTab(),
-        actions: [
-          IconButton(
-            tooltip: 'Profile',
-            icon: const Icon(Icons.person_outline),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => Scaffold(appBar: AppBar(title: const Text('Profile')), body: const ProfileView()),
-            )),
-          ),
-        ],
       ),
       const ShellTab(label: 'Attendance', icon: Icons.fact_check_outlined, body: ParentAttendanceScreen()),
       const ShellTab(label: 'Leave', icon: Icons.event_busy_outlined, body: ParentLeavesScreen()),
@@ -177,6 +170,7 @@ class _HomeTabState extends State<_HomeTab> with WidgetsBindingObserver {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         children: [
+          SrClockHeader(name: context.read<AuthController>().user?.fullName),
           const SelectedChildHeader(),
           if (c.liveError != null)
             Padding(

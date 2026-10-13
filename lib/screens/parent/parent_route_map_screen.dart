@@ -104,7 +104,7 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         children: [
           const SelectedChildHeader(),
           Row(
@@ -112,7 +112,8 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
               if (link.pickupRoute != null)
                 Expanded(
                   child: ChoiceChip(
-                    label: const Text('Morning trip'),
+                    avatar: const Icon(Icons.wb_sunny_rounded, size: 18),
+                    label: const SizedBox(width: double.infinity, child: Text('Morning trip', textAlign: TextAlign.center)),
                     selected: _morning,
                     onSelected: (_) => setState(() => _morning = true),
                   ),
@@ -121,7 +122,8 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
               if (link.dropRoute != null)
                 Expanded(
                   child: ChoiceChip(
-                    label: const Text('Evening trip'),
+                    avatar: const Icon(Icons.nights_stay_rounded, size: 18),
+                    label: const SizedBox(width: double.infinity, child: Text('Evening trip', textAlign: TextAlign.center)),
                     selected: !_morning,
                     onSelected: (_) => setState(() => _morning = false),
                   ),
@@ -132,14 +134,20 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
           if (route == null || stops.isEmpty)
             const EmptyView(icon: Icons.alt_route, title: 'No route assigned to this student')
           else ...[
-            Text(
-              [
-                route.name,
-                if (student.pickupBus != null && _morning) 'Bus ${student.pickupBus!.busNumber}',
-                if (student.dropBus != null && !_morning) 'Bus ${student.dropBus!.busNumber}',
-              ].join(' · '),
+            Padding(
+              padding: const EdgeInsets.only(left: 2),
+              child: Text(
+                [
+                  route.name,
+                  if (student.pickupBus != null && _morning) 'Bus ${student.pickupBus!.busNumber}',
+                  if (student.dropBus != null && !_morning) 'Bus ${student.dropBus!.busNumber}',
+                ].join(' · '),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.slate),
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             TripMap(
               stops: stops,
               places: [?schoolPlace(link.school), ...childStopPlaces(student, skipStopIds: {for (final s in route.stops) s.publicId})],
@@ -155,9 +163,17 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
                     ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        radius: 15,
+                        backgroundColor: (s.publicId == highlightId ? AppColors.green : AppColors.brand).withValues(alpha: 0.12),
+                        foregroundColor: s.publicId == highlightId ? AppColors.green : AppColors.brand,
+                        child: Text('${s.sequence}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+                      ),
                       title: Text(
-                        '${s.sequence}. ${s.name}',
-                        style: TextStyle(fontWeight: s.publicId == highlightId ? FontWeight.w800 : FontWeight.normal),
+                        s.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: s.publicId == highlightId ? FontWeight.w800 : FontWeight.w600),
                       ),
                       subtitle: Text(_morning ? (s.pickupTime ?? '') : (s.dropTime ?? '')),
                       trailing: s.publicId == highlightId

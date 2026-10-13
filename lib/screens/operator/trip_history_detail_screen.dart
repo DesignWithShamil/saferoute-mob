@@ -5,6 +5,7 @@ import '../../app_services.dart';
 import '../../core/api/api_exception.dart';
 import '../../models/student.dart';
 import '../../models/trip.dart';
+import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 
 /// Full attendance list for one past trip (opened from History tab).
@@ -56,34 +57,89 @@ class _TripHistoryDetailScreenState extends State<TripHistoryDetailScreen> {
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
                     children: [
-                      Card(
-                        child: ListTile(
-                          title: Text('${t.routeName} · ${TripType.label(t.tripType)}'),
-                          subtitle: Text([
-                            if (t.date != null) t.date!,
-                            if (t.bus != null) 'Bus ${t.bus!.busNumber}',
-                          ].join(' · ')),
-                          trailing: StatusChip(label: TripStatus.label(t.status), color: AppColors.forStatus(t.status)),
+                      SrFadeIn(
+                        child: Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${t.routeName} · ${TripType.label(t.tripType)}',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.ink, letterSpacing: -0.3),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        [
+                                          if (t.date != null) t.date!,
+                                          if (t.bus != null) 'Bus ${t.bus!.busNumber}',
+                                        ].join(' · '),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 13, color: AppColors.slate),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                StatusChip(label: TripStatus.label(t.status), color: AppColors.forStatus(t.status)),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       if (_attendance == null || _attendance!.isEmpty)
                         const EmptyView(icon: Icons.fact_check_outlined, title: 'No attendance records')
                       else
-                        for (final r in _attendance!)
-                          Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              title: Text(r.student.fullName),
-                              subtitle: Text([
-                                r.stop?.name ?? 'No stop',
-                                if (r.student.admissionNumber.isNotEmpty) r.student.admissionNumber,
-                              ].join(' · ')),
-                              trailing: StatusChip(
-                                label: AttendanceStatus.label(r.status),
-                                color: AppColors.forStatus(r.status),
+                        for (var i = 0; i < _attendance!.length; i++)
+                          SrFadeIn(
+                            delay: Duration(milliseconds: (i < 8 ? i : 8) * 40),
+                            offset: 14,
+                            child: Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _attendance![i].student.fullName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink, letterSpacing: -0.2),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            [
+                                              _attendance![i].stop?.name ?? 'No stop',
+                                              if (_attendance![i].student.admissionNumber.isNotEmpty) _attendance![i].student.admissionNumber,
+                                            ].join(' · '),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontSize: 13, color: AppColors.slate),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    StatusChip(
+                                      label: AttendanceStatus.label(_attendance![i].status),
+                                      color: AppColors.forStatus(_attendance![i].status),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
