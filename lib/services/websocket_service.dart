@@ -14,6 +14,7 @@ class WebSocketService extends ChangeNotifier {
 
   final _storage = const FlutterSecureStorage();
   final Map<String, List<Function(Map<String, dynamic>)>> _listeners = {};
+  final Set<String> _seenEventIds = {};
 
   bool get isConnected => _isConnected;
 
@@ -37,15 +38,28 @@ class WebSocketService extends ChangeNotifier {
           
           try {
             final payload = jsonDecode(message);
-            if (payload['event'] != null) {
-              final eventName = payload['event'] as String;
-              final data = payload['data'] as Map<String, dynamic>;
-              _dispatch(eventName, data);
+            if (payload is Map) {
+              final map = Map<String, dynamic>.from(payload);
+              final eventId = map['event_id'] as String?;
+              if (eventId != null) {
+                if (_seenEventIds.contains(eventId)) return;
+                _seenEventIds.add(eventId);
+                if (_seenEventIds.length > 300) {
+                  _seenEventIds.remove(_seenEventIds.first);
+                }
+              }
+
+              final eventName = (map['event'] ?? map['type']) as String?;
+              if (eventName != null) {
+                final data = map['data'] is Map ? Map<String, dynamic>.from(map['data'] as Map) : <String, dynamic>{};
+                _dispatch(eventName, data);
+              }
             }
           } catch (e) {
             debugPrint('[WebSocket] Parse error: $e');
           }
         },
+
         onDone: () {
           _handleDisconnect();
         },

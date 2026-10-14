@@ -281,6 +281,14 @@ class _PickupPinCardState extends State<_PickupPinCard> {
     showSnack(context, 'Permanent PIN updated successfully.');
   }
 
+  void _removePermanent() {
+    setState(() {
+      _pin.clear();
+      _error = null;
+    });
+    showSnack(context, 'Permanent PIN removed successfully.');
+  }
+
   void _generateTemp() {
     String next;
     do {
@@ -343,6 +351,7 @@ class _PickupPinCardState extends State<_PickupPinCard> {
               maxLength: 4,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(labelText: 'PIN', counterText: '', isDense: true),
+              onChanged: (_) => setState(() {}),
             ),
             AnimatedSize(
               duration: const Duration(milliseconds: 200),
@@ -355,7 +364,22 @@ class _PickupPinCardState extends State<_PickupPinCard> {
                     ),
             ),
             const SizedBox(height: 10),
-            FilledButton(onPressed: _savePermanent, child: const Text('Save')),
+            Row(
+              children: [
+                FilledButton(onPressed: _savePermanent, child: const Text('Save')),
+                if (_pin.text.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  OutlinedButton(
+                    onPressed: _removePermanent,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.red,
+                      side: const BorderSide(color: AppColors.red),
+                    ),
+                    child: const Text('Remove'),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
       );

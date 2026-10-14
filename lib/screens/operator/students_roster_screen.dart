@@ -91,7 +91,14 @@ class _StudentsRosterScreenState extends State<StudentsRosterScreen> {
     if (_loading) return const LoadingView(label: 'Loading students…');
     if (_error != null) return ErrorView(message: _error!, onRetry: _load);
 
+    final q = _query.text.trim().toLowerCase();
     final filtered = _students.where((s) {
+      if (q.isNotEmpty) {
+        final matchesName = s.fullName.toLowerCase().contains(q);
+        final matchesAdm = s.admissionNumber.toLowerCase().contains(q);
+        final matchesId = s.publicId.toLowerCase().contains(q);
+        if (!matchesName && !matchesAdm && !matchesId) return false;
+      }
       if (_routeFilter == 'ALL') return true;
       return s.pickupStop?.publicId == _routeFilter ||
           s.dropStop?.publicId == _routeFilter ||
@@ -109,11 +116,28 @@ class _StudentsRosterScreenState extends State<StudentsRosterScreen> {
           SrFadeIn(
             child: TextField(
               controller: _query,
+              onChanged: (_) => setState(() {}),
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                labelText: 'Lookup by admission no. or QR',
+                labelText: 'Search student name, ID or scan QR',
                 prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.slate),
-                suffixIcon: IconButton(icon: const Icon(Icons.search), onPressed: _lookupStudent),
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_query.text.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        onPressed: () {
+                          _query.clear();
+                          setState(() {
+                            _lookup = null;
+                            _lookupError = null;
+                          });
+                        },
+                      ),
+                    IconButton(icon: const Icon(Icons.search), onPressed: _lookupStudent),
+                  ],
+                ),
               ),
               onSubmitted: _lookupStudent,
             ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/user.dart';
 import '../../repositories/notification_repository.dart';
 import '../../screens/notifications/notifications_screen.dart';
+import '../../screens/operator/staff_message_thread_screen.dart';
 import '../../screens/parent/child_detail_screen.dart';
 import '../../screens/parent/live_trip_screen.dart';
 
@@ -53,6 +54,7 @@ class DeepLinkRouter {
     navigator.popUntil((route) => route.isFirst);
     final tripId = _nonEmpty(data['trip_id']);
     final studentId = _nonEmpty(data['student_id']);
+    final conversationId = _nonEmpty(data['conversation_id']);
 
     switch (user.role) {
       case UserRole.parent:
@@ -65,7 +67,9 @@ class DeepLinkRouter {
         }
       case UserRole.driver:
       case UserRole.helper:
-        if (tripId != null || data['type'] == 'DRIVER_ASSIGNED') {
+        if (conversationId != null) {
+          navigator.push(MaterialPageRoute(builder: (_) => StaffMessageThreadScreen(conversationId: conversationId)));
+        } else if (tripId != null || data['type'] == 'DRIVER_ASSIGNED') {
           operatorRefresh.value++;
         } else {
           navigator.push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
@@ -74,6 +78,7 @@ class DeepLinkRouter {
         break;
     }
   }
+
 
   static String? _nonEmpty(String? v) => (v == null || v.isEmpty) ? null : v;
 }

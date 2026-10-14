@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -69,15 +71,17 @@ class SignedInShell extends StatefulWidget {
   State<SignedInShell> createState() => _SignedInShellState();
 }
 
-class _SignedInShellState extends State<SignedInShell> with SingleTickerProviderStateMixin {
+class _SignedInShellState extends State<SignedInShell> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   int _index = 0;
   bool _moreOpen = false;
+  Timer? _unreadTimer;
   late final AnimationController _pageAnim =
       AnimationController(vsync: this, duration: const Duration(milliseconds: 320), value: 1);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final services = context.read<AppServices>();
@@ -85,10 +89,22 @@ class _SignedInShellState extends State<SignedInShell> with SingleTickerProvider
       await services.notificationService.onSignedIn(context);
       notifications.refreshUnread();
     });
+    _unreadTimer = Timer.periodic(const Duration(seconds: 25), (_) {
+      if (mounted) context.read<NotificationsController>().refreshUnread();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      context.read<NotificationsController>().refreshUnread();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _unreadTimer?.cancel();
     _pageAnim.dispose();
     super.dispose();
   }
@@ -124,9 +140,12 @@ class _SignedInShellState extends State<SignedInShell> with SingleTickerProvider
           if (_index == widget.alertsTabIndex) const MarkAllReadButton(),
           _BellButton(
             unread: unread,
-            onTap: () {
+            onTap: () async {
               HapticFeedback.selectionClick();
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+              await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+              if (context.mounted) {
+                context.read<NotificationsController>().refreshUnread();
+              }
             },
           ),
           if (widget.onSos != null) _SosChip(onTap: widget.onSos!),

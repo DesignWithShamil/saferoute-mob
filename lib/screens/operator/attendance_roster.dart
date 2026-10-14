@@ -10,7 +10,7 @@ import 'student_detail_sheet.dart';
 /// Mobile version of the web AttendanceRoster component, with the same
 /// action rules: Board/Absent while not marked; on evening trips (when drop
 /// actions are enabled) Drop, or Verify & Drop for PIN-protected students.
-class AttendanceRosterView extends StatelessWidget {
+class AttendanceRosterView extends StatefulWidget {
   const AttendanceRosterView({
     super.key,
     required this.roster,
@@ -32,25 +32,112 @@ class AttendanceRosterView extends StatelessWidget {
   final bool actionsInDetail;
 
   @override
+  State<AttendanceRosterView> createState() => _AttendanceRosterViewState();
+}
+
+class _AttendanceRosterViewState extends State<AttendanceRosterView> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (roster.isEmpty) {
+    if (widget.roster.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 12),
         child: Text('No students expected here.', textAlign: TextAlign.center),
       );
     }
+
+    final q = _query.trim().toLowerCase();
+    final filteredRoster = q.isEmpty
+        ? widget.roster
+        : widget.roster.where((r) {
+            final name = r.student.fullName.toLowerCase();
+            final adm = r.student.admissionNumber.toLowerCase();
+            final pid = r.student.publicId.toLowerCase();
+            return name.contains(q) || adm.contains(q) || pid.contains(q);
+          }).toList();
+
     final groups = <String, List<AttendanceRecord>>{};
-    for (final r in roster) {
-      final key = groupByStop ? (r.stop?.publicId ?? r.stop?.name ?? 'No stop assigned') : '';
+    for (final r in filteredRoster) {
+      final key = widget.groupByStop ? (r.stop?.publicId ?? r.stop?.name ?? 'No stop assigned') : '';
       groups.putIfAbsent(key, () => []).add(r);
     }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (showStats) _Counts(roster: roster, compact: compactStats),
-        if (showStats) const SizedBox(height: 8),
+        if (widget.showStats) _Counts(roster: widget.roster, compact: widget.compactStats),
+        const SizedBox(height: 10),
+        // Search bar for filtering students by name or ID
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextField(
+            controller: _searchCtrl,
+            onChanged: (val) => setState(() => _query = val),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
+            decoration: InputDecoration(
+              hintText: 'Search student name or ID / Adm No…',
+              hintStyle: const TextStyle(fontSize: 13, color: AppColors.slate, fontWeight: FontWeight.normal),
+              prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppColors.slate),
+              suffixIcon: _query.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.slate),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() => _query = '');
+                      },
+                    )
+                  : null,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+            ),
+          ),
+        ),
+        if (q.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, left: 4),
+            child: Text(
+              'Showing ${filteredRoster.length} of ${widget.roster.length} students',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.brand),
+            ),
+          ),
+        const SizedBox(height: 4),
+        if (filteredRoster.isEmpty && q.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Column(
+              children: [
+                Icon(Icons.search_off_rounded, size: 38, color: AppColors.slate.withValues(alpha: 0.5)),
+                const SizedBox(height: 8),
+                Text(
+                  'No students found matching "$q"',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate),
+                ),
+              ],
+            ),
+          ),
         for (final entry in groups.entries) ...[
-          if (groupByStop && entry.value.isNotEmpty)
+          if (widget.groupByStop && entry.value.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 10, bottom: 8),
               child: Row(
@@ -76,9 +163,9 @@ class AttendanceRosterView extends StatelessWidget {
           for (final r in entry.value)
             _RosterRow(
               record: r,
-              isAfternoon: isAfternoon,
-              dropActions: dropActions,
-              actionsInDetail: actionsInDetail,
+              isAfternoon: widget.isAfternoon,
+              dropActions: widget.dropActions,
+              actionsInDetail: widget.actionsInDetail,
             ),
         ],
       ],

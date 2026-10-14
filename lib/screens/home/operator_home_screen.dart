@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../providers/auth_controller.dart';
 import '../../providers/operator_trip_controller.dart';
 import '../notifications/notifications_screen.dart';
 import '../operator/boarding_screen.dart';
@@ -21,9 +20,6 @@ class OperatorHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthController>().user!;
-    final isDriver = user.isDriver;
-
     final tripActions = [
       IconButton(
         tooltip: 'Refresh',

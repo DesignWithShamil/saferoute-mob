@@ -43,13 +43,27 @@ class _StaffMessageThreadScreenState extends State<StaffMessageThreadScreen> {
   void initState() {
     super.initState();
     _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AppServices>().webSocket.subscribe('staff_message.created', _onWsMessage);
+      }
+    });
+  }
+
+  void _onWsMessage(Map<String, dynamic> data) {
+    if (!mounted) return;
+    _load();
   }
 
   @override
   void dispose() {
+    try {
+      context.read<AppServices>().webSocket.unsubscribe('staff_message.created', _onWsMessage);
+    } catch (_) {}
     _scroll.dispose();
     super.dispose();
   }
+
 
   String? _formatDate(DateTime? d) => d == null ? null : DateFormat('yyyy-MM-dd').format(d);
 

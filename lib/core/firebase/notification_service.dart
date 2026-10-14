@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -41,6 +42,7 @@ class NotificationService {
 
   final _foreground = StreamController<ForegroundMessage>.broadcast();
   final _taps = StreamController<Map<String, String>>.broadcast();
+  final Set<String> _recentNotificationIds = {};
   StreamSubscription<String>? _tokenRefreshSub;
   Map<String, String>? _launchTap;
   bool _firebaseReady = false;
@@ -67,8 +69,25 @@ class NotificationService {
             requestSoundPermission: false,
           ),
         ),
+        onDidReceiveNotificationResponse: (response) {
+          final payload = response.payload;
+          if (payload != null && payload.isNotEmpty) {
+            try {
+              final map = Map<String, dynamic>.from(jsonDecode(payload) as Map);
+              _taps.add(_stringify(map));
+            } catch (_) {}
+          }
+        },
       );
       await NotificationChannels.ensureCreated(_local);
+
+      final launchDetails = await _local.getNotificationAppLaunchDetails();
+      if (launchDetails?.didNotificationLaunchApp == true && launchDetails?.notificationResponse?.payload != null) {
+        try {
+          final map = Map<String, dynamic>.from(jsonDecode(launchDetails!.notificationResponse!.payload!) as Map);
+          _launchTap = _stringify(map);
+        } catch (_) {}
+      }
     } catch (e) {
       debugPrint('Local notifications unavailable: $e');
     }
@@ -80,17 +99,59 @@ class NotificationService {
     try {
       if (Firebase.apps.isEmpty) await Firebase.initializeApp(options: Env.firebaseOptions);
       FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
-      FirebaseMessaging.onMessage.listen((m) => _foreground.add(ForegroundMessage(
-            title: m.notification?.title ?? 'SafeRoute',
-            body: m.notification?.body ?? '',
-            data: _stringify(m.data),
-          )));
+      FirebaseMessaging.onMessage.listen((m) async {
+        final title = m.notification?.title ?? (m.data['title']?.toString() ?? 'SafeRoute');
+        final body = m.notification?.body ?? (m.data['body']?.toString() ?? m.data['message']?.toString() ?? '');
+        final data = _stringify(m.data);
+
+        final notifId = data['notification_id'];
+        if (notifId != null && notifId.isNotEmpty) {
+          if (_recentNotificationIds.contains(notifId)) return;
+          _recentNotificationIds.add(notifId);
+          if (_recentNotificationIds.length > 200) {
+            _recentNotificationIds.remove(_recentNotificationIds.first);
+          }
+        }
+
+        try {
+          await _local.show(
+            id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            title: title,
+            body: body,
+            notificationDetails: const NotificationDetails(
+              android: AndroidNotificationDetails(
+                NotificationChannels.alertsId,
+                'Trip & student alerts',
+                channelDescription: 'Trip started, bus approaching, pickup/drop and emergency alerts.',
+                importance: Importance.max,
+                priority: Priority.high,
+                icon: '@mipmap/ic_launcher',
+              ),
+              iOS: DarwinNotificationDetails(
+                presentAlert: true,
+                presentBadge: true,
+                presentSound: true,
+              ),
+            ),
+            payload: jsonEncode(data),
+          );
+        } catch (e) {
+          debugPrint('Local foreground notification show error: $e');
+        }
+
+        _foreground.add(ForegroundMessage(
+          title: title,
+          body: body,
+          data: data,
+        ));
+      });
       FirebaseMessaging.onMessageOpenedApp.listen((m) => _taps.add(_stringify(m.data)));
       final initial = await FirebaseMessaging.instance.getInitialMessage();
       if (initial != null) _launchTap = _stringify(initial.data);
       _firebaseReady = true;
     } catch (e) {
       debugPrint('Firebase initialisation failed; push disabled: $e');
+
     }
   }
 
@@ -158,12 +219,17 @@ class NotificationService {
     if (proceed != true) return;
     try {
       if (_firebaseReady) {
-        await FirebaseMessaging.instance.requestPermission();
-      } else {
+        await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      }
+      try {
         await _local
             .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
             ?.requestNotificationsPermission();
-      }
+      } catch (_) {}
     } catch (e) {
       debugPrint('Notification permission request failed: $e');
     }
