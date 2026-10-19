@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_controller.dart';
@@ -92,14 +93,21 @@ class _ParentRegisterScreenState extends State<ParentRegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SrAuthBackground(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 24),
-              child: Form(
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
+        child: SrAuthBackground(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: SingleChildScrollView(
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 24),
+                child: Form(
                 key: _form,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -280,8 +288,9 @@ class _ParentRegisterScreenState extends State<ParentRegisterScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _StepIndicator extends StatelessWidget {

@@ -399,7 +399,7 @@ class _DockBar extends StatelessWidget {
                       left: 0,
                       right: 0,
                       child: Center(
-                        child: _Orb(bg: bg, open: moreOpen, unread: unread, onTap: onMore),
+                        child: _Orb(bg: bg, open: moreOpen, onTap: onMore),
                       ),
                     ),
                 ],
@@ -414,15 +414,14 @@ class _DockBar extends StatelessWidget {
 
 /// Floating centre button that opens the "More" panel.
 class _Orb extends StatelessWidget {
-  const _Orb({required this.bg, required this.open, required this.unread, required this.onTap});
+  const _Orb({required this.bg, required this.open, required this.onTap});
   final Color bg;
   final bool open;
-  final int unread;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    Widget icon = AnimatedSwitcher(
+    final icon = AnimatedSwitcher(
       duration: const Duration(milliseconds: 240),
       transitionBuilder: (child, anim) => RotationTransition(
         turns: Tween<double>(begin: 0.75, end: 1).animate(anim),
@@ -435,9 +434,6 @@ class _Orb extends StatelessWidget {
         size: 26,
       ),
     );
-    if (unread > 0 && !open) {
-      icon = Badge(label: Text(unread > 99 ? '99+' : '$unread'), backgroundColor: AppColors.red, child: icon);
-    }
     return Semantics(
       button: true,
       label: 'More options',

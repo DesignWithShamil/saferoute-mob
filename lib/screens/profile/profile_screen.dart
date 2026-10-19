@@ -112,9 +112,7 @@ class _ProfileViewState extends State<ProfileView> {
     final parent = user.isParent ? context.watch<ParentController>() : null;
 
     final initial = user.fullName.isEmpty ? '?' : user.fullName.characters.first.toUpperCase();
-    final schoolName = (user.isParent && parent != null)
-        ? (parent.children.isNotEmpty ? parent.children.first.school.name : null)
-        : auth.school?.name;
+    final schoolName = user.isParent ? null : auth.school?.name;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),

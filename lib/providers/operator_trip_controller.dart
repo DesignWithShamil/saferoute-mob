@@ -34,6 +34,7 @@ class OperatorTripController extends ChangeNotifier {
   bool loading = true;
   String? loadError;
   bool acting = false;
+  String? startingTripKey;
 
   List<RouteInfo> routes = const [];
   String? selectedRouteId;
@@ -254,23 +255,30 @@ class OperatorTripController extends ChangeNotifier {
     if (access != LocationAccess.granted) {
       return 'Location permission is required to start a trip, so the bus can be tracked.';
     }
-    return _act(() async {
-      final position = await _s.location.currentPosition();
-      if (position == null) {
-        throw ApiException(ApiErrorKind.unknown, 'Could not get your GPS position. Check the signal and try again.');
-      }
-      trip = await _s.trips.start(
-        routeId: route.publicId,
-        tripType: tripType,
-        latitude: position.latitude,
-        longitude: position.longitude,
-      );
-      _geometryTripId = null;
-      todaysTrips = await _s.trips.forDate(DateTime.now()).catchError((_) => todaysTrips);
-      await _loadTripDetails();
-      await _syncTracking();
-      _restartPolling();
-    });
+    startingTripKey = '${route.publicId}_$tripType';
+    notifyListeners();
+    try {
+      return await _act(() async {
+        final position = await _s.location.currentPosition();
+        if (position == null) {
+          throw ApiException(ApiErrorKind.unknown, 'Could not get your GPS position. Check the signal and try again.');
+        }
+        trip = await _s.trips.start(
+          routeId: route.publicId,
+          tripType: tripType,
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
+        _geometryTripId = null;
+        todaysTrips = await _s.trips.forDate(DateTime.now()).catchError((_) => todaysTrips);
+        await _loadTripDetails();
+        await _syncTracking();
+        _restartPolling();
+      });
+    } finally {
+      startingTripKey = null;
+      notifyListeners();
+    }
   }
 
   Future<String?> beginDriving() => _tripAction((id) => _s.trips.begin(id));

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/config/env.dart';
@@ -53,14 +54,21 @@ class _LoginScreenState extends State<LoginScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      body: SrAuthBackground(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 20),
-              child: Form(
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
+        child: SrAuthBackground(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: SingleChildScrollView(
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 20),
+                child: Form(
                 key: _form,
                 child: AutofillGroup(
                   child: Column(
@@ -223,6 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

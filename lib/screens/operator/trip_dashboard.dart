@@ -222,12 +222,14 @@ class _StartButton extends StatelessWidget {
       );
     }
 
+    final isThisStarting = c.acting && c.startingTripKey == '${route.publicId}_$tripType';
+
     return _TripButtonShell(
       color: AppColors.brand,
       icon: isMorning ? Icons.wb_sunny_outlined : Icons.nights_stay_outlined,
       title: 'START $title',
       subtitle: subtitle,
-      busy: c.acting,
+      busy: isThisStarting,
       onTap: c.acting
           ? null
           : () async {
@@ -265,18 +267,19 @@ class _TripButtonShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
+    final showActiveStyle = enabled || busy;
     return Ink(
       decoration: BoxDecoration(
-        gradient: enabled
+        gradient: showActiveStyle
             ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [color, Color.lerp(color, AppColors.ink, 0.35)!],
               )
             : null,
-        color: enabled ? null : color.withValues(alpha: 0.10),
+        color: showActiveStyle ? null : color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: enabled ? [BoxShadow(color: color.withValues(alpha: 0.30), blurRadius: 16, offset: const Offset(0, 8))] : null,
+        boxShadow: showActiveStyle ? [BoxShadow(color: color.withValues(alpha: 0.30), blurRadius: 16, offset: const Offset(0, 8))] : null,
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -287,7 +290,7 @@ class _TripButtonShell extends StatelessWidget {
             children: [
               busy
                   ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                  : Icon(icon, size: 28, color: enabled || busy ? Colors.white : color),
+                  : Icon(icon, size: 28, color: showActiveStyle ? Colors.white : color),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -295,11 +298,13 @@ class _TripButtonShell extends StatelessWidget {
                   children: [
                     Text(title,
                         style: TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w800, color: enabled || busy ? Colors.white : color)),
-                    Text(subtitle, style: TextStyle(color: enabled || busy ? Colors.white70 : color)),
+                            fontSize: 17, fontWeight: FontWeight.w800, color: showActiveStyle ? Colors.white : color)),
+                    Text(subtitle, style: TextStyle(color: showActiveStyle ? Colors.white70 : color.withValues(alpha: 0.7))),
                   ],
                 ),
               ),
+              if (showActiveStyle && !busy)
+                const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.white70),
             ],
           ),
         ),
