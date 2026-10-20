@@ -143,6 +143,30 @@ class TransportContact {
   final String phone;
 }
 
+class ChildPickupPin {
+  const ChildPickupPin({
+    this.permanentPin,
+    this.hasPermanentPin = false,
+    this.temporaryPin,
+    this.hasTemporaryPin = false,
+    this.temporaryPinExpiresAt,
+  });
+
+  final String? permanentPin;
+  final bool hasPermanentPin;
+  final String? temporaryPin;
+  final bool hasTemporaryPin;
+  final DateTime? temporaryPinExpiresAt;
+
+  factory ChildPickupPin.fromJson(Map<String, dynamic> json) => ChildPickupPin(
+        permanentPin: asString(json['permanent_pin']),
+        hasPermanentPin: json['has_permanent_pin'] == true,
+        temporaryPin: asString(json['temporary_pin']),
+        hasTemporaryPin: json['has_temporary_pin'] == true,
+        temporaryPinExpiresAt: asDateTime(json['temporary_pin_expires_at']),
+      );
+}
+
 /// One of the parent's children, from `/api/parent/children/`. Everything
 /// here belongs to the child's own school, which may differ between children.
 class ParentLink {
@@ -156,6 +180,7 @@ class ParentLink {
     this.pickupRoute,
     this.dropRoute,
     this.contacts = const [],
+    this.pickupPin,
   });
 
   final String publicId;
@@ -166,12 +191,29 @@ class ParentLink {
   final String linkedBy;
   final ChildRoute? pickupRoute;
   final ChildRoute? dropRoute;
+  final ChildPickupPin? pickupPin;
 
   /// Only present when the child's school allows parents to contact the crew.
   final List<TransportContact> contacts;
 
   /// Child's display name in pickers (shows school when available).
   String get label => school.name.isEmpty ? student.fullName : '${student.fullName} - ${school.name}';
+
+  ParentLink copyWith({
+    ChildPickupPin? pickupPin,
+  }) =>
+      ParentLink(
+        publicId: publicId,
+        student: student,
+        school: school,
+        relation: relation,
+        canApplyLeave: canApplyLeave,
+        linkedBy: linkedBy,
+        pickupRoute: pickupRoute,
+        dropRoute: dropRoute,
+        contacts: contacts,
+        pickupPin: pickupPin ?? this.pickupPin,
+      );
 
   factory ParentLink.fromJson(Map<String, dynamic> json) {
     final contacts = asMap(json['transport_contacts']);
@@ -191,6 +233,7 @@ class ParentLink {
       linkedBy: asString(json['linked_by']) ?? '',
       pickupRoute: ChildRoute.fromJsonOrNull(json['pickup_route']),
       dropRoute: ChildRoute.fromJsonOrNull(json['drop_route']),
+      pickupPin: json['pickup_pin'] is Map ? ChildPickupPin.fromJson(asMap(json['pickup_pin'])) : null,
       contacts: [
         ?person('pickup_driver', 'Morning driver'),
         ?person('pickup_helper', 'Morning helper'),

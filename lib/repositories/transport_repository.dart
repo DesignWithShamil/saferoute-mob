@@ -59,6 +59,33 @@ class TransportRepository {
   Future<ParentLink> childDetail(String studentId) async =>
       ParentLink.fromJson(asMap(await _api.get(ApiEndpoints.parentChild(studentId))));
 
+  Future<ChildPickupPin> getChildPin(String studentId) async =>
+      ChildPickupPin.fromJson(asMap(await _api.get(ApiEndpoints.parentChildPin(studentId))));
+
+  Future<ChildPickupPin> setChildPermanentPin(String studentId, String pin) async =>
+      ChildPickupPin.fromJson(asMap(await _api.post(
+        ApiEndpoints.parentChildPin(studentId),
+        data: {'action': 'set_permanent', 'pin': pin},
+      )));
+
+  Future<ChildPickupPin> removeChildPermanentPin(String studentId) async =>
+      ChildPickupPin.fromJson(asMap(await _api.post(
+        ApiEndpoints.parentChildPin(studentId),
+        data: {'action': 'remove_permanent'},
+      )));
+
+  Future<ChildPickupPin> generateChildTemporaryPin(String studentId) async =>
+      ChildPickupPin.fromJson(asMap(await _api.post(
+        ApiEndpoints.parentChildPin(studentId),
+        data: {'action': 'generate_temporary'},
+      )));
+
+  Future<ChildPickupPin> cancelChildTemporaryPin(String studentId) async =>
+      ChildPickupPin.fromJson(asMap(await _api.post(
+        ApiEndpoints.parentChildPin(studentId),
+        data: {'action': 'cancel_temporary'},
+      )));
+
   Future<List<Student>> assignedStudents() async {
     final rows = await _api.getList(ApiEndpoints.students, query: {'page_size': 100});
     return rows.whereType<Map>().map((e) => Student.fromJson(asMap(e))).toList();

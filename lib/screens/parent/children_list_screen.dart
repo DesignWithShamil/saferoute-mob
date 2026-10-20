@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api/api_exception.dart';
 import '../../models/student.dart';
 import '../../providers/parent_controller.dart';
 import '../../widgets/sr_animations.dart';
@@ -69,8 +70,10 @@ class _ChildrenListScreenState extends State<ChildrenListScreen> with AutomaticK
                   ],
                 ),
                 const SizedBox(height: 14),
-                const SrFadeIn(child: _PickupPinCard()),
-                const SizedBox(height: 4),
+                if (c.children.isNotEmpty) ...[
+                  SrFadeIn(child: _ChildrenPickupPinSection(children: c.children)),
+                  const SizedBox(height: 14),
+                ],
                 if (c.children.isEmpty)
                   const Padding(
                     padding: EdgeInsets.only(top: 48),
@@ -247,73 +250,187 @@ class _Tag extends StatelessWidget {
       );
 }
 
-/// Web-style pickup PIN block (mock until PIN API exists).
-class _PickupPinCard extends StatefulWidget {
-  const _PickupPinCard();
+/// Per-child pickup security PIN section.
+class _ChildrenPickupPinSection extends StatefulWidget {
+  const _ChildrenPickupPinSection({required this.children});
+
+  final List<ParentLink> children;
 
   @override
-  State<_PickupPinCard> createState() => _PickupPinCardState();
+  State<_ChildrenPickupPinSection> createState() => _ChildrenPickupPinSectionState();
 }
 
-class _PickupPinCardState extends State<_PickupPinCard> {
-  static const _taken = {'1234', '1111', '0000', '9999', '4321'};
-  final _pin = TextEditingController();
+class _ChildrenPickupPinSectionState extends State<_ChildrenPickupPinSection> {
+  String? _selectedStudentId;
+  final _pinController = TextEditingController();
   String? _error;
-  String? _tempPin;
+  bool _savingPermanent = false;
+  bool _generatingTemp = false;
+  bool _cancellingTemp = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initSelection();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ChildrenPickupPinSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_selectedStudentId == null ||
+        !widget.children.any((c) => c.student.publicId == _selectedStudentId)) {
+      _initSelection();
+    } else {
+      final selected = _currentLink;
+      if (selected != null && _pinController.text.isEmpty && selected.pickupPin?.permanentPin != null) {
+        _pinController.text = selected.pickupPin!.permanentPin!;
+      }
+    }
+  }
+
+  void _initSelection() {
+    if (widget.children.isNotEmpty) {
+      _selectedStudentId = widget.children.first.student.publicId;
+      _pinController.text = widget.children.first.pickupPin?.permanentPin ?? '';
+      _error = null;
+    }
+  }
+
+  ParentLink? get _currentLink {
+    for (final c in widget.children) {
+      if (c.student.publicId == _selectedStudentId) return c;
+    }
+    return widget.children.firstOrNull;
+  }
 
   @override
   void dispose() {
-    _pin.dispose();
+    _pinController.dispose();
     super.dispose();
   }
 
-  void _savePermanent() {
-    final value = _pin.text.trim();
-    if (value.length != 4) {
-      setState(() => _error = 'Please enter a valid 4-digit PIN.');
+  Future<void> _savePermanent(ParentLink link) async {
+    final value = _pinController.text.trim();
+    if (value.length != 4 || !RegExp(r'^\d{4}$').hasMatch(value)) {
+      setState(() => _error = 'Please enter a valid 4-digit numeric PIN.');
       return;
     }
-    if (_taken.contains(value)) {
-      setState(() => _error = 'This PIN is already in use by another parent. Please choose a different one.');
-      return;
-    }
-    setState(() => _error = null);
-    showSnack(context, 'Permanent PIN updated successfully.');
-  }
-
-  void _removePermanent() {
     setState(() {
-      _pin.clear();
       _error = null;
+      _savingPermanent = true;
     });
-    showSnack(context, 'Permanent PIN removed successfully.');
+    try {
+      await context.read<ParentController>().setPermanentPin(link.student.publicId, value);
+      if (mounted) showSnack(context, 'Permanent PIN saved for ${link.student.fullName}.');
+    } catch (e) {
+      if (mounted) setState(() => _error = describeError(e));
+    } finally {
+      if (mounted) setState(() => _savingPermanent = false);
+    }
   }
 
-  void _generateTemp() {
-    String next;
-    do {
-      next = (1000 + DateTime.now().microsecondsSinceEpoch % 9000).toString();
-    } while (_taken.contains(next));
-    setState(() => _tempPin = next);
+  Future<void> _removePermanent(ParentLink link) async {
+    setState(() {
+      _error = null;
+      _savingPermanent = true;
+    });
+    try {
+      await context.read<ParentController>().removePermanentPin(link.student.publicId);
+      _pinController.clear();
+      if (mounted) showSnack(context, 'Permanent PIN removed for ${link.student.fullName}.');
+    } catch (e) {
+      if (mounted) setState(() => _error = describeError(e));
+    } finally {
+      if (mounted) setState(() => _savingPermanent = false);
+    }
+  }
+
+  Future<void> _generateTemp(ParentLink link) async {
+    setState(() => _generatingTemp = true);
+    try {
+      await context.read<ParentController>().generateTemporaryPin(link.student.publicId);
+      if (mounted) showSnack(context, 'Temporary PIN generated for ${link.student.fullName}.');
+    } catch (e) {
+      if (mounted) showSnack(context, 'Failed to generate PIN: ${describeError(e)}');
+    } finally {
+      if (mounted) setState(() => _generatingTemp = false);
+    }
+  }
+
+  Future<void> _cancelTemp(ParentLink link) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Cancel temporary PIN for ${link.student.fullName}?'),
+        content: const Text('This will immediately deactivate this child’s temporary PIN for today.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Keep')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Cancel PIN'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    setState(() => _cancellingTemp = true);
+    try {
+      await context.read<ParentController>().cancelTemporaryPin(link.student.publicId);
+      if (mounted) showSnack(context, 'Temporary PIN cancelled for ${link.student.fullName}.');
+    } catch (e) {
+      if (mounted) showSnack(context, 'Failed to cancel PIN: ${describeError(e)}');
+    } finally {
+      if (mounted) setState(() => _cancellingTemp = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final link = _currentLink;
+    if (link == null) return const SizedBox.shrink();
+
     return SectionCard(
       title: 'Pickup security PIN',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Set a permanent PIN or generate a temporary one for today. This applies to all your children.',
+            'Create a separate Pickup Security PIN for each child. You can cancel temporary PINs individually.',
             style: TextStyle(fontSize: 14, color: AppColors.slate, height: 1.4),
           ),
-          const SizedBox(height: 16),
+          if (widget.children.length > 1) ...[
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: widget.children.map((c) {
+                  final isSelected = c.student.publicId == _selectedStudentId;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(c.student.fullName),
+                      selected: isSelected,
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedStudentId = c.student.publicId;
+                          _pinController.text = c.pickupPin?.permanentPin ?? '';
+                          _error = null;
+                        });
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
           LayoutBuilder(
             builder: (context, constraints) {
               final wide = constraints.maxWidth > 520;
-              final permanent = _permanentPinPanel();
-              final temp = _tempPinPanel();
+              final permanent = _permanentPinPanel(link);
+              final temp = _tempPinPanel(link);
               if (wide) {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,7 +449,7 @@ class _PickupPinCardState extends State<_PickupPinCard> {
     );
   }
 
-  Widget _permanentPinPanel() => Container(
+  Widget _permanentPinPanel(ParentLink link) => Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.slate.withValues(alpha: 0.04),
@@ -342,12 +459,25 @@ class _PickupPinCardState extends State<_PickupPinCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Permanent PIN', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink)),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Permanent PIN · ${link.student.fullName}',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (link.pickupPin?.hasPermanentPin == true)
+                  const StatusChip(label: 'Set', color: AppColors.slate),
+              ],
+            ),
             const SizedBox(height: 4),
             const Text('Set a secure 4-digit code for everyday pickups.', style: TextStyle(fontSize: 12, color: AppColors.slate)),
             const SizedBox(height: 10),
             TextField(
-              controller: _pin,
+              controller: _pinController,
               maxLength: 4,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(labelText: 'PIN', counterText: '', isDense: true),
@@ -366,11 +496,14 @@ class _PickupPinCardState extends State<_PickupPinCard> {
             const SizedBox(height: 10),
             Row(
               children: [
-                FilledButton(onPressed: _savePermanent, child: const Text('Save')),
-                if (_pin.text.isNotEmpty) ...[
+                FilledButton(
+                  onPressed: _savingPermanent ? null : () => _savePermanent(link),
+                  child: Text(_savingPermanent ? 'Saving…' : 'Save'),
+                ),
+                if (link.pickupPin?.hasPermanentPin == true || _pinController.text.isNotEmpty) ...[
                   const SizedBox(width: 8),
                   OutlinedButton(
-                    onPressed: _removePermanent,
+                    onPressed: _savingPermanent ? null : () => _removePermanent(link),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.red,
                       side: const BorderSide(color: AppColors.red),
@@ -384,44 +517,72 @@ class _PickupPinCardState extends State<_PickupPinCard> {
         ),
       );
 
-  Widget _tempPinPanel() => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.brand.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.brand.withValues(alpha: 0.25)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Temporary PIN', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.brand)),
-            const SizedBox(height: 4),
-            const Text('Valid for today only. Useful for one-time pickups.', style: TextStyle(fontSize: 12, color: AppColors.brand)),
-            const SizedBox(height: 10),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: _tempPin == null
-                  ? OutlinedButton.icon(
-                      key: const ValueKey('gen'),
-                      onPressed: _generateTemp,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Auto-generate'),
-                    )
-                  : Wrap(
-                      key: const ValueKey('pin'),
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 12,
-                      runSpacing: 8,
-                      children: [
-                        Text(
-                          _tempPin!,
-                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: 6, color: AppColors.ink),
+  Widget _tempPinPanel(ParentLink link) {
+    final hasTemp = link.pickupPin?.hasTemporaryPin == true && link.pickupPin?.temporaryPin != null;
+    final tempPin = link.pickupPin?.temporaryPin;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.brand.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.brand.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Temporary PIN · ${link.student.fullName}',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.brand),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (hasTemp) const StatusChip(label: 'Active today', color: AppColors.green),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text('Valid for today only. Useful for one-time pickups.', style: TextStyle(fontSize: 12, color: AppColors.brand)),
+          const SizedBox(height: 10),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: !hasTemp
+                ? OutlinedButton.icon(
+                    key: const ValueKey('gen'),
+                    onPressed: _generatingTemp ? null : () => _generateTemp(link),
+                    icon: _generatingTemp
+                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.refresh),
+                    label: Text(_generatingTemp ? 'Generating…' : 'Auto-generate'),
+                  )
+                : Column(
+                    key: const ValueKey('pin'),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tempPin ?? '',
+                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: 6, color: AppColors.ink),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: _cancellingTemp ? null : () => _cancelTemp(link),
+                        icon: _cancellingTemp
+                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.cancel_outlined, size: 16),
+                        label: Text(_cancellingTemp ? 'Cancelling…' : 'Cancel temporary PIN'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.red,
+                          side: const BorderSide(color: AppColors.red),
                         ),
-                        const StatusChip(label: 'Active today', color: AppColors.green),
-                      ],
-                    ),
-            ),
-          ],
-        ),
-      );
+                      ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
 }

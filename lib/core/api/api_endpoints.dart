@@ -43,6 +43,7 @@ class ApiEndpoints {
   static const parentChildLink = '/parent/children/link/';
   static String parentChild(String studentId) => '/parent/children/$studentId/';
   static String parentChildUnlink(String studentId) => '/parent/children/$studentId/unlink/';
+  static String parentChildPin(String studentId) => '/parent/children/$studentId/pin/';
 
   static const sos = '/emergency/sos/';
 

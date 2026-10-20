@@ -249,6 +249,38 @@ class ParentController extends ChangeNotifier {
 
   Future<ParentLink> childWithStops(String studentId) => _s.transport.childDetail(studentId);
 
+  void _updateChildPin(String studentId, ChildPickupPin pin) {
+    children = [
+      for (final c in children)
+        if (c.student.publicId == studentId) c.copyWith(pickupPin: pin) else c,
+    ];
+    notifyListeners();
+  }
+
+  Future<ChildPickupPin> setPermanentPin(String studentId, String pin) async {
+    final updated = await _s.transport.setChildPermanentPin(studentId, pin);
+    _updateChildPin(studentId, updated);
+    return updated;
+  }
+
+  Future<ChildPickupPin> removePermanentPin(String studentId) async {
+    final updated = await _s.transport.removeChildPermanentPin(studentId);
+    _updateChildPin(studentId, updated);
+    return updated;
+  }
+
+  Future<ChildPickupPin> generateTemporaryPin(String studentId) async {
+    final updated = await _s.transport.generateChildTemporaryPin(studentId);
+    _updateChildPin(studentId, updated);
+    return updated;
+  }
+
+  Future<ChildPickupPin> cancelTemporaryPin(String studentId) async {
+    final updated = await _s.transport.cancelChildTemporaryPin(studentId);
+    _updateChildPin(studentId, updated);
+    return updated;
+  }
+
   void reset() {
     _poll?.cancel();
     _poll = null;
