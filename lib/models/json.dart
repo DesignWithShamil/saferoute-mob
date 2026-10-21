@@ -20,6 +20,8 @@ DateTime? asDate(dynamic value) {
   return DateTime.tryParse(value.toString())?.toLocal();
 }
 
+DateTime? asDateTime(dynamic value) => asDate(value);
+
 Map<String, dynamic> asMap(dynamic value) =>
     value is Map ? Map<String, dynamic>.from(value) : const <String, dynamic>{};
 

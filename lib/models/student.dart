@@ -163,7 +163,7 @@ class ChildPickupPin {
         hasPermanentPin: json['has_permanent_pin'] == true,
         temporaryPin: asString(json['temporary_pin']),
         hasTemporaryPin: json['has_temporary_pin'] == true,
-        temporaryPinExpiresAt: asDateTime(json['temporary_pin_expires_at']),
+        temporaryPinExpiresAt: asDate(json['temporary_pin_expires_at']),
       );
 }
 
