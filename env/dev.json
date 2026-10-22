@@ -1,8 +1,8 @@
-{
+﻿{
     "FIREBASE_ANDROID_APP_ID": "1:1027827882337:android:c7d9e03b88f499c4d48d20",
     "MAP_TILE_URL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     "FIREBASE_STORAGE_BUCKET": "saferoutez.firebasestorage.app",
-    "API_BASE_URL": "http://192.168.0.14:8000/api",
+    "API_BASE_URL": "http://127.0.0.1:8000/api",
     "FIREBASE_API_KEY": "AIzaSyAJODJKNttg56-qBvcMAQTpSFusTIMgnd8",
     "FIREBASE_IOS_BUNDLE_ID": "",
     "OSRM_BASE_URL": "https://router.project-osrm.org",

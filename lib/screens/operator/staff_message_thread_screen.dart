@@ -45,7 +45,10 @@ class _StaffMessageThreadScreenState extends State<StaffMessageThreadScreen> {
     _load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<AppServices>().webSocket.subscribe('staff_message.created', _onWsMessage);
+        final p = context.read<AppServices>().pusher;
+        p.subscribe('staff_message.created', _onWsMessage);
+        p.subscribe('staff_message.updated', _onWsMessage);
+        p.subscribe('staff_message.deleted', _onWsMessage);
       }
     });
   }
@@ -58,7 +61,10 @@ class _StaffMessageThreadScreenState extends State<StaffMessageThreadScreen> {
   @override
   void dispose() {
     try {
-      context.read<AppServices>().webSocket.unsubscribe('staff_message.created', _onWsMessage);
+      final p = context.read<AppServices>().pusher;
+      p.unsubscribe('staff_message.created', _onWsMessage);
+      p.unsubscribe('staff_message.updated', _onWsMessage);
+      p.unsubscribe('staff_message.deleted', _onWsMessage);
     } catch (_) {}
     _scroll.dispose();
     super.dispose();

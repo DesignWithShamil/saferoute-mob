@@ -16,7 +16,7 @@ import '../models/transport.dart';
 /// against the parent's own links.
 class ParentController extends ChangeNotifier {
   ParentController(this._s) {
-    _setupWs();
+    _setupPusher();
   }
 
   final AppServices _s;
@@ -138,14 +138,14 @@ class ParentController extends ChangeNotifier {
   /// Reference-counted so the home tab and an open live screen share one timer.
   void startPolling() {
     _pollUsers++;
-    // Polling removed in favour of WebSocket events.
+    // Polling removed in favour of Pusher real-time events.
   }
 
   void stopPolling() {
     if (_pollUsers > 0) _pollUsers--;
   }
 
-  void _onWsEvent(Map<String, dynamic> data) {
+  void _onPusherEvent(Map<String, dynamic> data) {
     if (_pollUsers > 0) {
       if (data.containsKey('latitude') && data.containsKey('longitude') && data.containsKey('bus_id')) {
         final tripId = data['trip_id'] as String?;
@@ -169,22 +169,22 @@ class ParentController extends ChangeNotifier {
     }
   }
 
-  void _setupWs() {
-    _s.webSocket.subscribe('trip.started', _onWsEvent);
-    _s.webSocket.subscribe('trip.ended', _onWsEvent);
-    _s.webSocket.subscribe('trip.stop.updated', _onWsEvent);
-    _s.webSocket.subscribe('route.updated', _onWsEvent);
-    _s.webSocket.subscribe('attendance.updated', _onWsEvent);
-    _s.webSocket.subscribe('bus.location.updated', _onWsEvent);
+  void _setupPusher() {
+    _s.pusher.subscribe('trip.started', _onPusherEvent);
+    _s.pusher.subscribe('trip.ended', _onPusherEvent);
+    _s.pusher.subscribe('trip.stop.updated', _onPusherEvent);
+    _s.pusher.subscribe('route.updated', _onPusherEvent);
+    _s.pusher.subscribe('attendance.updated', _onPusherEvent);
+    _s.pusher.subscribe('bus.location.updated', _onPusherEvent);
   }
 
-  void _teardownWs() {
-    _s.webSocket.unsubscribe('trip.started', _onWsEvent);
-    _s.webSocket.unsubscribe('trip.ended', _onWsEvent);
-    _s.webSocket.unsubscribe('trip.stop.updated', _onWsEvent);
-    _s.webSocket.unsubscribe('route.updated', _onWsEvent);
-    _s.webSocket.unsubscribe('attendance.updated', _onWsEvent);
-    _s.webSocket.unsubscribe('bus.location.updated', _onWsEvent);
+  void _teardownPusher() {
+    _s.pusher.unsubscribe('trip.started', _onPusherEvent);
+    _s.pusher.unsubscribe('trip.ended', _onPusherEvent);
+    _s.pusher.unsubscribe('trip.stop.updated', _onPusherEvent);
+    _s.pusher.unsubscribe('route.updated', _onPusherEvent);
+    _s.pusher.unsubscribe('attendance.updated', _onPusherEvent);
+    _s.pusher.unsubscribe('bus.location.updated', _onPusherEvent);
   }
 
   ParentLink? childById(String studentId) {
@@ -299,7 +299,7 @@ class ParentController extends ChangeNotifier {
   @override
   void dispose() {
     _poll?.cancel();
-    _teardownWs();
+    _teardownPusher();
     super.dispose();
   }
 }

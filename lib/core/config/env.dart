@@ -11,7 +11,7 @@ class Env {
 
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.0.14:8000/api',
+    defaultValue: 'http://127.0.0.1:8000/api',
   );
 
   static const osrmBaseUrl = String.fromEnvironment(
@@ -24,11 +24,26 @@ class Env {
     defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   );
 
-  static const _firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
-  static const _firebaseProjectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
-  static const _firebaseSenderId = String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
-  static const _firebaseStorageBucket = String.fromEnvironment('FIREBASE_STORAGE_BUCKET');
-  static const _firebaseAndroidAppId = String.fromEnvironment('FIREBASE_ANDROID_APP_ID');
+  static const _firebaseApiKey = String.fromEnvironment(
+    'FIREBASE_API_KEY',
+    defaultValue: 'AIzaSyAJODJKNttg56-qBvcMAQTpSFusTIMgnd8',
+  );
+  static const _firebaseProjectId = String.fromEnvironment(
+    'FIREBASE_PROJECT_ID',
+    defaultValue: 'saferoutez',
+  );
+  static const _firebaseSenderId = String.fromEnvironment(
+    'FIREBASE_MESSAGING_SENDER_ID',
+    defaultValue: '1027827882337',
+  );
+  static const _firebaseStorageBucket = String.fromEnvironment(
+    'FIREBASE_STORAGE_BUCKET',
+    defaultValue: 'saferoutez.firebasestorage.app',
+  );
+  static const _firebaseAndroidAppId = String.fromEnvironment(
+    'FIREBASE_ANDROID_APP_ID',
+    defaultValue: '1:1027827882337:android:c7d9e03b88f499c4d48d20',
+  );
   static const _firebaseIosAppId = String.fromEnvironment('FIREBASE_IOS_APP_ID');
   static const _firebaseIosBundleId = String.fromEnvironment('FIREBASE_IOS_BUNDLE_ID');
 
@@ -50,14 +65,7 @@ class Env {
         iosBundleId: _firebaseIosBundleId.isEmpty ? null : _firebaseIosBundleId,
       );
 
-  /// WebSocket/host root derived from the API base, e.g. `http://host:8000`.
+  /// Server root derived from the API base, e.g. `http://host:8000`.
   static String get serverRoot => apiBaseUrl.replaceFirst(RegExp(r'/api/?$'), '');
-
-  /// WebSocket base URL, replacing http/https with ws/wss.
-  static String get wsBaseUrl {
-    final root = serverRoot;
-    if (root.startsWith('https://')) return root.replaceFirst('https://', 'wss://');
-    if (root.startsWith('http://')) return root.replaceFirst('http://', 'ws://');
-    return root;
-  }
 }
+

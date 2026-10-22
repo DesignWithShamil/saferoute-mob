@@ -234,14 +234,14 @@ Not tested yet:
 1. `POST /api/auth/logout/` returns 500: `RefreshToken.blacklist()` is called but
    `rest_framework_simplejwt.token_blacklist` isn't in `INSTALLED_APPS`. The mobile app still clears its tokens locally.
 2. `GET /api/trips/…` returns 500 for PARENT users (`FieldError` on `trip_stops__stop__students`). The app uses `/api/gps/parent-live/` like the web.
-3. WebSocket `/ws/gps/<bus>/` fails for parents (`bus.students` doesn't exist). The app polls, like the web.
+3. Real-time events are delivered via Pusher Channels (`bus.location.updated`, `trip.*`, etc.).
 4. The web helper dashboard shows *Start trip* and *Cancel*, but the backend rejects both for helpers (403).
 5. `manage.py seed_full` uses outdated enum values (`route_type="pickup"`, `status="in_progress"`).
 
 ## Production checklist
 
 * Backend: `pip install -r requirements.txt`, `migrate`, `FIREBASE_CREDENTIALS_FILE` (server-side file, 0600), HTTPS, and
-  `ALLOWED_HOSTS` for the API domain. Redis must be running for the web's realtime features.
+  `ALLOWED_HOSTS` for the API domain. Pusher Channels credentials configured for realtime features.
 * App: `env/prod.json` with the HTTPS `API_BASE_URL`, production tile/OSRM URLs and Firebase client values. Release signing.
   Bump `version:` in `pubspec.yaml`.
 * Play Console: declare the foreground-service **location** use (the app shares location only during an active trip, with a

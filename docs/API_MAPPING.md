@@ -24,10 +24,10 @@ registration + FCM delivery (section 4).
 ### Pre-existing backend defects found (not changed — reported)
 
 1. `GET /api/trips/`, `/api/trips/today/`, `/api/trips/<id>/`, `/api/trips/<id>/location/` return **500 for PARENT** users: `_trip_queryset_for` filters on `trip_stops__stop__students__parentstudent__parent`, but `RouteStop` has no `students` relation (`FieldError`).
-2. WebSocket `/ws/gps/<bus>/` fails for **PARENT** users: `GPSConsumer._is_authorized` uses `bus.students`, which does not exist on `Bus` (`AttributeError`).
+2. Real-time updates: migrated from legacy WebSocket consumers to Pusher Channels (`bus.location.updated`, `trip.*`, etc.).
 3. `POST /api/auth/logout/` calls `RefreshToken.blacklist()` but `rest_framework_simplejwt.token_blacklist` is not in `INSTALLED_APPS`.
 
-The web parent dashboard avoids 1 and 2 by polling `/api/gps/parent-live/`; the mobile parent flow does the same. Mobile logout clears local tokens even if the server call fails.
+The web parent dashboard polls `/api/gps/parent-live/` and receives live Pusher events; the mobile parent flow does the same. Mobile logout clears local tokens even if the server call fails.
 
 ## 2. Feature → endpoint mapping
 

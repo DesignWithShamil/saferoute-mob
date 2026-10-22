@@ -5,7 +5,9 @@ import '../core/api/api_exception.dart';
 import '../models/app_notification.dart';
 
 class NotificationsController extends ChangeNotifier {
-  NotificationsController(this._s);
+  NotificationsController(this._s) {
+    _setupPusher();
+  }
 
   final AppServices _s;
 
@@ -22,23 +24,70 @@ class NotificationsController extends ChangeNotifier {
 
   /// Parent choice between "selected child" and "all children".
   bool showAllChildren = false;
+
+  /// Category filter: 'ALL', 'ALERTS', 'ANNOUNCEMENTS'
+  String categoryFilter = 'ALL';
+
+  /// Optional text search
+  String searchQuery = '';
+
   int _loadRequest = 0;
 
+  void _setupPusher() {
+    _s.pusher.subscribe('notification.created', _onPusherUpdate);
+    _s.pusher.subscribe('notification.deleted', _onPusherUpdate);
+    _s.pusher.subscribe('notification.updated', _onPusherUpdate);
+    _s.pusher.subscribe('staff_message.deleted', _onPusherUpdate);
+    _s.pusher.subscribe('staff_message.updated', _onPusherUpdate);
+  }
+
+  void _teardownPusher() {
+    _s.pusher.unsubscribe('notification.created', _onPusherUpdate);
+    _s.pusher.unsubscribe('notification.deleted', _onPusherUpdate);
+    _s.pusher.unsubscribe('notification.updated', _onPusherUpdate);
+    _s.pusher.unsubscribe('staff_message.deleted', _onPusherUpdate);
+    _s.pusher.unsubscribe('staff_message.updated', _onPusherUpdate);
+  }
+
+  void _onPusherUpdate(Map<String, dynamic> data) {
+    load();
+  }
+
+  @override
+  void dispose() {
+    _teardownPusher();
+    super.dispose();
+  }
+
   Future<void> setStudentFilter(String? studentId) async {
-    if (studentId == studentFilter) return;
+    if (studentId == studentFilter && (studentId != null || showAllChildren)) return;
     studentFilter = studentId;
+    showAllChildren = (studentId == null);
     await load();
   }
 
   Future<void> setShowAllChildren(bool value, {String? selectedChildId}) async {
-    if (value == showAllChildren && (value || studentFilter == selectedChildId)) return;
     showAllChildren = value;
-    await setStudentFilter(value ? null : selectedChildId);
+    studentFilter = value ? null : selectedChildId;
+    await load();
   }
 
   Future<void> filterByChild(String studentId) async {
     showAllChildren = false;
-    await setStudentFilter(studentId);
+    studentFilter = studentId;
+    await load();
+  }
+
+  Future<void> setCategoryFilter(String category) async {
+    if (categoryFilter == category) return;
+    categoryFilter = category;
+    await load();
+  }
+
+  Future<void> setSearchQuery(String query) async {
+    if (searchQuery == query) return;
+    searchQuery = query;
+    await load();
   }
 
   Future<void> load() async {
@@ -47,7 +96,12 @@ class NotificationsController extends ChangeNotifier {
     final request = ++_loadRequest;
     notifyListeners();
     try {
-      final page = await _s.notifications.list(page: 1, studentId: studentFilter);
+      final page = await _s.notifications.list(
+        page: 1,
+        studentId: studentFilter,
+        category: categoryFilter,
+        search: searchQuery,
+      );
       if (request != _loadRequest) return;
       items = page.items;
       hasMore = page.hasMore;
@@ -68,7 +122,12 @@ class NotificationsController extends ChangeNotifier {
     loadingMore = true;
     notifyListeners();
     try {
-      final page = await _s.notifications.list(page: _page + 1, studentId: studentFilter);
+      final page = await _s.notifications.list(
+        page: _page + 1,
+        studentId: studentFilter,
+        category: categoryFilter,
+        search: searchQuery,
+      );
       items = [...items, ...page.items];
       hasMore = page.hasMore;
       _page += 1;
@@ -142,6 +201,8 @@ class NotificationsController extends ChangeNotifier {
     error = null;
     studentFilter = null;
     showAllChildren = false;
+    categoryFilter = 'ALL';
+    searchQuery = '';
     _loadRequest++;
   }
 }

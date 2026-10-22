@@ -20,7 +20,7 @@ import '../services/route_geometry_service.dart';
 class OperatorTripController extends ChangeNotifier {
   OperatorTripController(this._s) {
     _gpsSub = _s.gps.statusStream.listen(_onGpsStatus);
-    _setupWs();
+    _setupPusher();
   }
 
   final AppServices _s;
@@ -159,13 +159,13 @@ class OperatorTripController extends ChangeNotifier {
   }
 
   void _restartPolling() {
-    // Polling removed in favour of WebSocket events.
+    // Polling removed in favour of Pusher real-time events.
   }
 
   void pausePolling() {}
   void resumePolling() {}
 
-  void _onWsEvent(Map<String, dynamic> data) {
+  void _onPusherEvent(Map<String, dynamic> data) {
     if (_user == null) return;
     
     // We can infer the event type from the payload keys, but better to let the service pass it if needed.
@@ -181,22 +181,22 @@ class OperatorTripController extends ChangeNotifier {
     refresh();
   }
 
-  void _setupWs() {
-    _s.webSocket.subscribe('trip.started', _onWsEvent);
-    _s.webSocket.subscribe('trip.ended', _onWsEvent);
-    _s.webSocket.subscribe('trip.stop.updated', _onWsEvent);
-    _s.webSocket.subscribe('route.updated', _onWsEvent);
-    _s.webSocket.subscribe('attendance.updated', _onWsEvent);
-    _s.webSocket.subscribe('bus.location.updated', _onWsEvent);
+  void _setupPusher() {
+    _s.pusher.subscribe('trip.started', _onPusherEvent);
+    _s.pusher.subscribe('trip.ended', _onPusherEvent);
+    _s.pusher.subscribe('trip.stop.updated', _onPusherEvent);
+    _s.pusher.subscribe('route.updated', _onPusherEvent);
+    _s.pusher.subscribe('attendance.updated', _onPusherEvent);
+    _s.pusher.subscribe('bus.location.updated', _onPusherEvent);
   }
 
-  void _teardownWs() {
-    _s.webSocket.unsubscribe('trip.started', _onWsEvent);
-    _s.webSocket.unsubscribe('trip.ended', _onWsEvent);
-    _s.webSocket.unsubscribe('trip.stop.updated', _onWsEvent);
-    _s.webSocket.unsubscribe('route.updated', _onWsEvent);
-    _s.webSocket.unsubscribe('attendance.updated', _onWsEvent);
-    _s.webSocket.unsubscribe('bus.location.updated', _onWsEvent);
+  void _teardownPusher() {
+    _s.pusher.unsubscribe('trip.started', _onPusherEvent);
+    _s.pusher.unsubscribe('trip.ended', _onPusherEvent);
+    _s.pusher.unsubscribe('trip.stop.updated', _onPusherEvent);
+    _s.pusher.unsubscribe('route.updated', _onPusherEvent);
+    _s.pusher.unsubscribe('attendance.updated', _onPusherEvent);
+    _s.pusher.unsubscribe('bus.location.updated', _onPusherEvent);
   }
 
   // ---------------------------------------------------------------------------
@@ -362,7 +362,7 @@ class OperatorTripController extends ChangeNotifier {
   void dispose() {
     _poll?.cancel();
     _gpsSub?.cancel();
-    _teardownWs();
+    _teardownPusher();
     super.dispose();
   }
 }

@@ -16,12 +16,20 @@ class NotificationRepository {
   final ApiClient _api;
 
   /// [studentId] narrows a parent's inbox to one child's notifications.
-  Future<NotificationPage> list({int page = 1, String? studentId}) async {
-    final data = asMap(await _api.get(ApiEndpoints.notifications, query: {
+  Future<NotificationPage> list({
+    int page = 1,
+    String? studentId,
+    String? category,
+    String? search,
+  }) async {
+    final query = <String, dynamic>{
       'page': page,
       'channel': 'IN_APP',
-      'student': ?studentId,
-    }));
+      if (studentId != null && studentId.isNotEmpty) 'student': studentId,
+      if (category != null && category.isNotEmpty && category != 'ALL') 'category': category,
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+    };
+    final data = asMap(await _api.get(ApiEndpoints.notifications, query: query));
     return NotificationPage(
       asList(data['results'], AppNotification.fromJson),
       hasMore: data['next'] != null,

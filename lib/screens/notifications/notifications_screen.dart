@@ -88,119 +88,165 @@ class NotificationsList extends StatefulWidget {
 }
 
 class _NotificationsListState extends State<NotificationsList> {
-  String _typeFilter = 'ALL'; // 'ALL' | 'ALERTS' | 'ANNOUNCEMENTS'
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final c = context.read<NotificationsController>();
-      final wanted = _wantedFilter(c);
-      wanted == c.studentFilter ? c.load() : c.setStudentFilter(wanted);
+      final parent = context.read<ParentController>();
+      if (c.studentFilter == null && !c.showAllChildren && parent.selectedChild != null) {
+        c.setStudentFilter(parent.selectedChild!.student.publicId);
+      } else {
+        c.load();
+      }
     });
   }
 
-  /// A parent with several children sees the selected child's notifications
-  /// unless they chose "All children".
-  String? _wantedFilter(NotificationsController c) {
-    final parent = context.read<ParentController>();
-    if (parent.children.length < 2 || c.showAllChildren) return null;
-    return parent.selectedChild?.student.publicId;
-  }
-
-  bool _isAnnouncement(AppNotification n) {
-    final t = n.type.toUpperCase();
-    final title = n.title.toLowerCase();
-    final msg = n.message.toLowerCase();
-    return t == 'STAFF_MESSAGE' ||
-        t == 'HOLIDAY_NOTICE' ||
-        title.contains('announcement') ||
-        msg.contains('announcement') ||
-        title.contains('broadcast') ||
-        msg.contains('broadcast');
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.watch<NotificationsController>();
     final parent = context.watch<ParentController>();
-    final wanted = _wantedFilter(c);
-    if (wanted != c.studentFilter) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.read<NotificationsController>().setStudentFilter(_wantedFilter(c));
-      });
-    }
 
+    // 1. Student Names Selecting Option Bar (shows all children + All children)
+    final studentSelectorBar = parent.children.isEmpty
+        ? null
+        : Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  ChoiceChip(
+                    avatar: const Icon(Icons.people_outline, size: 16),
+                    label: const Text('All children'),
+                    selected: c.showAllChildren,
+                    selectedColor: AppColors.brand,
+                    labelStyle: TextStyle(
+                      color: c.showAllChildren ? Colors.white : AppColors.ink,
+                      fontWeight: c.showAllChildren ? FontWeight.w600 : FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                    onSelected: (_) => c.setShowAllChildren(true),
+                  ),
+                  const SizedBox(width: 8),
+                  for (final child in parent.children) ...[
+                    ChoiceChip(
+                      avatar: const Icon(Icons.person_outline, size: 16),
+                      label: Text(child.student.fullName),
+                      selected: !c.showAllChildren && c.studentFilter == child.student.publicId,
+                      selectedColor: AppColors.brand,
+                      labelStyle: TextStyle(
+                        color: (!c.showAllChildren && c.studentFilter == child.student.publicId)
+                            ? Colors.white
+                            : AppColors.ink,
+                        fontWeight: (!c.showAllChildren && c.studentFilter == child.student.publicId)
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        fontSize: 12,
+                      ),
+                      onSelected: (_) {
+                        c.filterByChild(child.student.publicId);
+                        parent.selectChild(child.student.publicId);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ],
+              ),
+            ),
+          );
+
+    // 2. Category Tabs (All Notifications / Alerts / Announcements)
     final typeFilterBar = SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Row(
         children: [
           ChoiceChip(
-            label: const Text('All'),
-            selected: _typeFilter == 'ALL',
-            onSelected: (_) => setState(() => _typeFilter = 'ALL'),
+            label: const Text('All Notifications'),
+            selected: c.categoryFilter == 'ALL',
+            onSelected: (_) => c.setCategoryFilter('ALL'),
           ),
           const SizedBox(width: 8),
           ChoiceChip(
             label: const Text('🔔 Alerts'),
-            selected: _typeFilter == 'ALERTS',
-            onSelected: (_) => setState(() => _typeFilter = 'ALERTS'),
+            selected: c.categoryFilter == 'ALERTS',
+            onSelected: (_) => c.setCategoryFilter('ALERTS'),
           ),
           const SizedBox(width: 8),
           ChoiceChip(
             label: const Text('📢 Announcements'),
-            selected: _typeFilter == 'ANNOUNCEMENTS',
-            onSelected: (_) => setState(() => _typeFilter = 'ANNOUNCEMENTS'),
+            selected: c.categoryFilter == 'ANNOUNCEMENTS',
+            onSelected: (_) => c.setCategoryFilter('ANNOUNCEMENTS'),
           ),
         ],
       ),
     );
 
-    final filterBar = parent.children.length < 2
-        ? null
-        : Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-            child: SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: parent.children.length + 1,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (context, i) {
-                  if (i == parent.children.length) {
-                    return ChoiceChip(
-                      label: const Text('All children'),
-                      selected: c.showAllChildren,
-                      onSelected: (_) => c.setShowAllChildren(true),
-                    );
-                  }
-                  final child = parent.children[i];
-                  return ChoiceChip(
-                    label: Text(child.student.fullName, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    selected: !c.showAllChildren && c.studentFilter == child.student.publicId,
-                    onSelected: (_) => c.filterByChild(child.student.publicId),
-                  );
-                },
-              ),
+    // 3. Search Bar
+    final searchBar = Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+      child: SizedBox(
+        height: 38,
+        child: TextField(
+          controller: _searchController,
+          style: const TextStyle(fontSize: 13),
+          decoration: InputDecoration(
+            hintText: 'Search notifications or sender...',
+            hintStyle: const TextStyle(fontSize: 13, color: AppColors.slate),
+            prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.slate),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 16),
+                    onPressed: () {
+                      _searchController.clear();
+                      c.setSearchQuery('');
+                    },
+                  )
+                : null,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.border),
             ),
-          );
-
-    final displayedItems = c.items.where((n) {
-      if (_typeFilter == 'ANNOUNCEMENTS') return _isAnnouncement(n);
-      if (_typeFilter == 'ALERTS') return !_isAnnouncement(n);
-      return true;
-    }).toList();
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.brand),
+            ),
+          ),
+          onSubmitted: (val) => c.setSearchQuery(val.trim()),
+          onChanged: (val) {
+            setState(() {});
+            if (val.isEmpty) c.setSearchQuery('');
+          },
+        ),
+      ),
+    );
 
     Widget body;
     if (c.loading && c.items.isEmpty) {
       body = const LoadingView();
     } else if (c.error != null && c.items.isEmpty) {
       body = ErrorView(message: c.error!, onRetry: c.load);
-    } else if (c.items.isEmpty || displayedItems.isEmpty) {
-      final emptyTitle = _typeFilter == 'ANNOUNCEMENTS'
+    } else if (c.items.isEmpty) {
+      final emptyTitle = c.categoryFilter == 'ANNOUNCEMENTS'
           ? 'No announcements yet'
-          : _typeFilter == 'ALERTS'
+          : c.categoryFilter == 'ALERTS'
               ? 'No alerts yet'
               : 'No notifications yet';
       body = RefreshIndicator(
@@ -220,13 +266,16 @@ class _NotificationsListState extends State<NotificationsList> {
           },
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            itemCount: displayedItems.length + (c.hasMore ? 1 : 0),
+            itemCount: c.items.length + (c.hasMore ? 1 : 0),
             separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, i) {
-              if (i >= displayedItems.length) {
-                return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
+              if (i >= c.items.length) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: CircularProgressIndicator()),
+                );
               }
-              return _NotificationTile(item: displayedItems[i]);
+              return _NotificationTile(item: c.items[i]);
             },
           ),
         ),
@@ -235,8 +284,9 @@ class _NotificationsListState extends State<NotificationsList> {
 
     return Column(
       children: [
+        ?studentSelectorBar,
         typeFilterBar,
-        ?filterBar,
+        searchBar,
         Expanded(child: body),
       ],
     );
@@ -257,59 +307,294 @@ class _NotificationTile extends StatelessWidget {
         _ => Icons.notifications_outlined,
       };
 
+  bool get _isAnnouncement {
+    final t = item.type.toUpperCase();
+    final title = item.title.toLowerCase();
+    final msg = item.message.toLowerCase();
+    return t == 'STAFF_MESSAGE' ||
+        t == 'HOLIDAY_NOTICE' ||
+        title.contains('announcement') ||
+        msg.contains('announcement') ||
+        title.contains('broadcast') ||
+        msg.contains('broadcast');
+  }
+
+  String _formatTimeAgo(DateTime? date) {
+    if (date == null) return '';
+    final diff = DateTime.now().difference(date);
+    if (diff.inSeconds < 60) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 30) return '${diff.inDays}d ago';
+    return '${(diff.inDays / 30).floor()}mo ago';
+  }
+
+  String _formatFullDateTime(DateTime? date) {
+    if (date == null) return '';
+    return DateFormat('MMM d, yyyy, h:mm a').format(date);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final unread = !item.isRead;
     final emergency = item.type == 'EMERGENCY_ALERT';
     final accent = emergency ? AppColors.red : AppColors.brand;
+    final isAnn = _isAnnouncement;
+
     return Container(
       decoration: BoxDecoration(
         color: unread ? Color.alphaBlend(accent.withValues(alpha: 0.05), Colors.white) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: unread ? accent.withValues(alpha: 0.30) : AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Material(
         type: MaterialType.transparency,
-        child: ListTile(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      leading: CircleAvatar(
-        backgroundColor: unread ? accent.withValues(alpha: 0.14) : theme.colorScheme.surfaceContainerHighest,
-        child: Icon(_icon(item.type), color: unread ? accent : AppColors.slate),
-      ),
-      title: Text(item.title, style: TextStyle(fontWeight: unread ? FontWeight.w700 : FontWeight.w500)),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(item.message),
-          if (item.createdAt != null)
-            Text(DateFormat('d MMM, h:mm a').format(item.createdAt!), style: theme.textTheme.bodySmall),
-        ],
-      ),
-      isThreeLine: true,
-      trailing: IconButton(
-        icon: const Icon(Icons.close),
-        tooltip: 'Delete',
-        onPressed: () async {
-          final ok = await confirmDialog(
-            context,
-            title: 'Delete this notification?',
-            message: item.title,
-            confirm: 'Delete',
-            destructive: true,
-          );
-          if (!ok || !context.mounted) return;
-          final err = await context.read<NotificationsController>().delete(item);
-          if (err != null && context.mounted) showSnack(context, err, error: true);
-        },
-      ),
-      onTap: () {
-        final c = context.read<NotificationsController>();
-        c.markRead(item);
-        final hasTarget = item.data.containsKey('trip_id') || item.data.containsKey('student_id');
-        if (hasTarget) context.read<AppServices>().deepLinks.open({...item.data, 'type': item.type});
-      },
-    ),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            final c = context.read<NotificationsController>();
+            c.markRead(item);
+            final hasTarget = item.data.containsKey('trip_id') || item.data.containsKey('student_id');
+            if (hasTarget) context.read<AppServices>().deepLinks.open({...item.data, 'type': item.type});
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Row: Category, School, Student badges, edited tag & close button
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          // Announcement / Alert badge
+                          if (isAnn)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFFDE68A)),
+                              ),
+                              child: const Text(
+                                '📢 Announcement',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF92400E),
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFBFDBFE)),
+                              ),
+                              child: const Text(
+                                '🔔 Alert',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1D4ED8),
+                                ),
+                              ),
+                            ),
+
+                          // School Name badge
+                          if (item.schoolName != null && item.schoolName!.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEEF2FF),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFC7D2FE)),
+                              ),
+                              child: Text(
+                                '🏫 ${item.schoolName}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF4338CA),
+                                ),
+                              ),
+                            ),
+
+                          // Student Name badge (if linked)
+                          if (item.studentName != null && item.studentName!.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFECFDF5),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFA7F3D0)),
+                              ),
+                              child: Text(
+                                '👤 ${item.studentName}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF047857),
+                                ),
+                              ),
+                            ),
+
+                          // Target Context (e.g. All parents)
+                          if (item.data['context'] != null && item.data['context']!.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Text(
+                                '🎯 ${item.data['context']}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF475569),
+                                ),
+                              ),
+                            ),
+
+                          // Edited indicator
+                          if (item.isEdited)
+                            const Text(
+                              '(edited)',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontStyle: FontStyle.italic,
+                                color: AppColors.slate,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    if (unread)
+                      Container(
+                        margin: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.brand,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Text(
+                          'NEW',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+
+                    // Delete button
+                    InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () async {
+                        final ok = await confirmDialog(
+                          context,
+                          title: 'Delete this notification?',
+                          message: item.title,
+                          confirm: 'Delete',
+                          destructive: true,
+                        );
+                        if (!ok || !context.mounted) return;
+                        final err = await context.read<NotificationsController>().delete(item);
+                        if (err != null && context.mounted) showSnack(context, err, error: true);
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(Icons.close, size: 18, color: AppColors.slate),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // Title Row with Icon
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(_icon(item.type), size: 18, color: unread ? accent : AppColors.slate),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: unread ? FontWeight.w700 : FontWeight.w600,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 6),
+
+                // Message Body
+                Padding(
+                  padding: const EdgeInsets.only(left: 26),
+                  child: Text(
+                    item.message,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF334155),
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Footer: Time and relative time
+                Padding(
+                  padding: const EdgeInsets.only(left: 26),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.access_time, size: 13, color: AppColors.slate),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatFullDateTime(item.createdAt),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.slate,
+                        ),
+                      ),
+                      if (item.createdAt != null) ...[
+                        const Text('  ·  ', style: TextStyle(fontSize: 11, color: AppColors.slate)),
+                        Text(
+                          _formatTimeAgo(item.createdAt),
+                          style: const TextStyle(fontSize: 11, color: AppColors.slate),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

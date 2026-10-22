@@ -34,6 +34,7 @@ class StaffMessage {
     this.readAt,
     this.targetType,
     this.context = const {},
+    this.isEdited = false,
   });
 
   final String publicId;
@@ -44,6 +45,7 @@ class StaffMessage {
   final DateTime? readAt;
   final String? targetType;
   final Map<String, dynamic> context;
+  final bool isEdited;
 
   static const _targetLabels = {
     'ALL_DRIVERS': 'All drivers',
@@ -98,6 +100,7 @@ class StaffMessage {
         targetType: asString(json['target_type']),
         context: json['context'] is Map ? Map<String, dynamic>.from(json['context'] as Map) : const {},
         sender: json['sender'] is Map ? StaffMessagingUser.fromJson(asMap(json['sender'])) : null,
+        isEdited: json['is_edited'] == true,
       );
 }
 
