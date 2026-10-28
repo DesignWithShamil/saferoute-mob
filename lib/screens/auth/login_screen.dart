@@ -117,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           children: [
                                             const Icon(Icons.info_outline_rounded, color: AppColors.amber, size: 20),
                                             const SizedBox(width: 10),
-                                            Expanded(child: Text(sessionMessage, style: const TextStyle(color: Color(0xFF8A5A00), height: 1.35))),
+                                            Expanded(child: Text(sessionMessage, style: TextStyle(color: AppColors.onTint(AppColors.amber), height: 1.35))),
                                           ],
                                         ),
                                       ),

@@ -205,7 +205,7 @@ class _Counts extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(color: color.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(20)),
-            child: Text('$value $label', style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 11.5)),
+            child: Text('$value $label', style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12.5)),
           ),
       ],
     );
@@ -283,7 +283,7 @@ class _RosterRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: const Color(0xFFF7F9FD),
+        color: AppColors.bg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
           side: const BorderSide(color: AppColors.border),
@@ -325,7 +325,7 @@ class _RosterRow extends StatelessWidget {
                               padding: const EdgeInsets.only(top: 3),
                               child: Text(
                                 hint,
-                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.brand),
+                                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.brand),
                               ),
                             ),
                           const SizedBox(height: 8),

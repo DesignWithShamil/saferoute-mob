@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/sr_tokens.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -240,7 +241,7 @@ class _NotificationsListState extends State<NotificationsList> {
 
     Widget body;
     if (c.loading && c.items.isEmpty) {
-      body = const LoadingView();
+      body = const LoadingView(label: 'Loading notifications', skeleton: true);
     } else if (c.error != null && c.items.isEmpty) {
       body = ErrorView(message: c.error!, onRetry: c.load);
     } else if (c.items.isEmpty) {
@@ -311,12 +312,27 @@ class _NotificationTile extends StatelessWidget {
     final t = item.type.toUpperCase();
     final title = item.title.toLowerCase();
     final msg = item.message.toLowerCase();
+    final kind = (item.data['kind'] ?? '').toLowerCase();
     return t == 'STAFF_MESSAGE' ||
         t == 'HOLIDAY_NOTICE' ||
+        kind == 'school_announcement' ||
         title.contains('announcement') ||
         msg.contains('announcement') ||
         title.contains('broadcast') ||
         msg.contains('broadcast');
+  }
+
+  String get _cleanTitle {
+    final title = item.title;
+    final colonIdx = title.lastIndexOf(': ');
+    if (colonIdx != -1 && colonIdx < title.length - 2) {
+      final prefix = title.substring(0, colonIdx);
+      if ((item.studentName != null && prefix.contains(item.studentName!)) ||
+          (item.schoolName != null && prefix.contains(item.schoolName!))) {
+        return title.substring(colonIdx + 2);
+      }
+    }
+    return title;
   }
 
   String _formatTimeAgo(DateTime? date) {
@@ -380,105 +396,23 @@ class _NotificationTile extends StatelessWidget {
                         runSpacing: 4,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          // Announcement / Alert badge
                           if (isAnn)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF3C7),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFFDE68A)),
-                              ),
-                              child: const Text(
-                                '📢 Announcement',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF92400E),
-                                ),
-                              ),
-                            )
+                            const _MetaBadge(label: 'Announcement', icon: Icons.campaign_rounded, color: AppColors.amber)
                           else
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEFF6FF),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFBFDBFE)),
-                              ),
-                              child: const Text(
-                                '🔔 Alert',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF1D4ED8),
-                                ),
-                              ),
-                            ),
-
-                          // School Name badge
+                            const _MetaBadge(label: 'Alert', icon: Icons.notifications_active_rounded, color: AppColors.brand),
                           if (item.schoolName != null && item.schoolName!.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEEF2FF),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFC7D2FE)),
-                              ),
-                              child: Text(
-                                '🏫 ${item.schoolName}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF4338CA),
-                                ),
-                              ),
-                            ),
-
-                          // Student Name badge (if linked)
+                            _MetaBadge(label: item.schoolName!, icon: Icons.school_rounded, color: AppColors.brandDeep),
                           if (item.studentName != null && item.studentName!.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFECFDF5),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFA7F3D0)),
-                              ),
-                              child: Text(
-                                '👤 ${item.studentName}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF047857),
-                                ),
-                              ),
-                            ),
-
-                          // Target Context (e.g. All parents)
+                            _MetaBadge(label: item.studentName!, icon: Icons.person_rounded, color: AppColors.green),
                           if (item.data['context'] != null && item.data['context']!.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                              ),
-                              child: Text(
-                                '🎯 ${item.data['context']}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF475569),
-                                ),
-                              ),
-                            ),
+                            _MetaBadge(label: item.data['context']!, icon: Icons.groups_rounded, color: AppColors.slate),
 
                           // Edited indicator
                           if (item.isEdited)
                             const Text(
                               '(edited)',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontStyle: FontStyle.italic,
                                 color: AppColors.slate,
                               ),
@@ -490,16 +424,16 @@ class _NotificationTile extends StatelessWidget {
                     if (unread)
                       Container(
                         margin: const EdgeInsets.only(right: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: AppColors.brand,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Text(
-                          'NEW',
+                          'New',
                           style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
                         ),
@@ -507,7 +441,7 @@ class _NotificationTile extends StatelessWidget {
 
                     // Delete button
                     InkWell(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(24),
                       onTap: () async {
                         final ok = await confirmDialog(
                           context,
@@ -520,9 +454,13 @@ class _NotificationTile extends StatelessWidget {
                         final err = await context.read<NotificationsController>().delete(item);
                         if (err != null && context.mounted) showSnack(context, err, error: true);
                       },
-                      child: const Padding(
-                        padding: EdgeInsets.all(4),
-                        child: Icon(Icons.close, size: 18, color: AppColors.slate),
+                      child: const SizedBox(
+                        width: SrSize.touch,
+                        height: SrSize.touch,
+                        child: Tooltip(
+                          message: 'Delete notification',
+                          child: Icon(Icons.close, size: 20, color: AppColors.slate),
+                        ),
                       ),
                     ),
                   ],
@@ -538,7 +476,7 @@ class _NotificationTile extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        item.title,
+                        _cleanTitle,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: unread ? FontWeight.w700 : FontWeight.w600,
@@ -557,8 +495,8 @@ class _NotificationTile extends StatelessWidget {
                   child: Text(
                     item.message,
                     style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF334155),
+                      fontSize: 14,
+                      color: AppColors.ink,
                       height: 1.35,
                     ),
                   ),
@@ -571,21 +509,21 @@ class _NotificationTile extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 26),
                   child: Row(
                     children: [
-                      const Icon(Icons.access_time, size: 13, color: AppColors.slate),
+                      const Icon(Icons.access_time, size: 14, color: AppColors.slate),
                       const SizedBox(width: 4),
                       Text(
                         _formatFullDateTime(item.createdAt),
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: AppColors.slate,
                         ),
                       ),
                       if (item.createdAt != null) ...[
-                        const Text('  ·  ', style: TextStyle(fontSize: 11, color: AppColors.slate)),
+                        const Text('  ·  ', style: TextStyle(fontSize: 12, color: AppColors.slate)),
                         Text(
                           _formatTimeAgo(item.createdAt),
-                          style: const TextStyle(fontSize: 11, color: AppColors.slate),
+                          style: const TextStyle(fontSize: 12, color: AppColors.slate),
                         ),
                       ],
                     ],
@@ -595,6 +533,38 @@ class _NotificationTile extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Small tinted label used for notification context (type, school, student).
+/// Icon + text, so meaning never depends on colour alone.
+class _MetaBadge extends StatelessWidget {
+  const _MetaBadge({required this.label, required this.icon, required this.color});
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = AppColors.onTint(color);
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 220),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(SrRadius.chip),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: fg),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg)),
+          ),
+        ],
       ),
     );
   }

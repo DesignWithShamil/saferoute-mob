@@ -51,7 +51,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const LoadingView(label: 'Loading trip history…');
+    if (_loading) return const LoadingView(label: 'Loading trip history…', skeleton: true);
     if (_error != null) return ErrorView(message: _error!, onRetry: _load);
     if (_trips.isEmpty) {
       return RefreshIndicator(

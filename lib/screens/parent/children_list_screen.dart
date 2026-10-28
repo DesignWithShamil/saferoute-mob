@@ -35,7 +35,7 @@ class _ChildrenListScreenState extends State<ChildrenListScreen> with AutomaticK
     super.build(context);
     final c = context.watch<ParentController>();
     if (c.loading && c.children.isEmpty) {
-      return const LoadingView(label: 'Loading your children…');
+      return const LoadingView(label: 'Loading your children…', skeleton: true);
     }
     if (c.error != null && c.children.isEmpty) {
       return ErrorView(message: c.error!, onRetry: c.load);
@@ -178,10 +178,10 @@ class _ChildSummaryCard extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(
-                                link.relation.toUpperCase(),
+                                link.relation[0].toUpperCase() + link.relation.substring(1).toLowerCase(),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.brand, letterSpacing: 0.6),
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.brand),
                               ),
                             ),
                         ],
@@ -234,14 +234,14 @@ class _Tag extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
-                  label.toUpperCase(),
+                  label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                  style: TextStyle(color: AppColors.onTint(color), fontSize: 12, fontWeight: FontWeight.w700),
                 ),
               ),
             ],

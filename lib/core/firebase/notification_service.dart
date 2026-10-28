@@ -149,9 +149,18 @@ class NotificationService {
       final initial = await FirebaseMessaging.instance.getInitialMessage();
       if (initial != null) _launchTap = _stringify(initial.data);
       _firebaseReady = true;
+
+      // Print FCM token right on app startup so it's visible without waiting for sign-in
+      try {
+        final bootToken = await FirebaseMessaging.instance.getToken();
+        debugPrint('=============================================');
+        debugPrint('🔥 FCM TOKEN (App Startup): $bootToken');
+        debugPrint('=============================================');
+      } catch (tokenErr) {
+        debugPrint('⚠️ FCM getToken on startup error: $tokenErr');
+      }
     } catch (e) {
       debugPrint('Firebase initialisation failed; push disabled: $e');
-
     }
   }
 
@@ -159,15 +168,29 @@ class NotificationService {
   /// register this device's FCM token for the signed-in user.
   Future<void> onSignedIn(BuildContext context) async {
     await _maybeAskPermission(context);
-    if (!_firebaseReady) return;
+    if (!_firebaseReady) {
+      await init();
+    }
+    if (!_firebaseReady) {
+      debugPrint('⚠️ Firebase is not ready; cannot register FCM token.');
+      return;
+    }
     try {
       final messaging = FirebaseMessaging.instance;
       final token = await messaging.getToken();
-      if (token != null) await _register(token);
+      debugPrint('=============================================');
+      debugPrint('🔥 FCM TOKEN (Signed In): $token');
+      debugPrint('=============================================');
+      if (token != null && token.isNotEmpty) {
+        await _register(token);
+      }
       await _tokenRefreshSub?.cancel();
-      _tokenRefreshSub = messaging.onTokenRefresh.listen(_register);
+      _tokenRefreshSub = messaging.onTokenRefresh.listen((t) {
+        debugPrint('🔄 FCM TOKEN REFRESHED: $t');
+        if (t.isNotEmpty) _register(t);
+      });
     } catch (e) {
-      debugPrint('FCM token registration failed: $e');
+      debugPrint('❌ FCM token registration failed: $e');
     }
   }
 
@@ -193,11 +216,34 @@ class NotificationService {
   }
 
   Future<void> _register(String token) async {
-    await _repository.registerDevice(token, Platform.isIOS ? 'IOS' : 'ANDROID');
-    await _storage.setRegisteredFcmToken(token);
+    try {
+      await _repository.registerDevice(token, Platform.isIOS ? 'IOS' : 'ANDROID');
+      await _storage.setRegisteredFcmToken(token);
+      debugPrint('Device successfully registered with backend FCM.');
+    } catch (e) {
+      debugPrint('Backend device registration failed: $e');
+    }
   }
 
   Future<void> _maybeAskPermission(BuildContext context) async {
+    try {
+      if (_firebaseReady) {
+        await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          provisional: false,
+        );
+      }
+      try {
+        await _local
+            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            ?.requestNotificationsPermission();
+      } catch (_) {}
+    } catch (e) {
+      debugPrint('Notification system permission check failed: $e');
+    }
+
     if (await _storage.notificationPromptShown) return;
     if (!context.mounted) return;
     final proceed = await showDialog<bool>(

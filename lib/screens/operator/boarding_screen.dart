@@ -41,7 +41,7 @@ class BoardingScreen extends StatelessWidget {
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [AppColors.ink, Color(0xFF1B2A6B), AppColors.brand],
+                  colors: [AppColors.brandDeep, AppColors.brand],
                 ),
                 boxShadow: [BoxShadow(color: AppColors.brand.withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 10))],
               ),

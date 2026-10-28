@@ -88,7 +88,7 @@ class _StudentsRosterScreenState extends State<StudentsRosterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const LoadingView(label: 'Loading students…');
+    if (_loading) return const LoadingView(label: 'Loading students…', skeleton: true);
     if (_error != null) return ErrorView(message: _error!, onRetry: _load);
 
     final q = _query.text.trim().toLowerCase();

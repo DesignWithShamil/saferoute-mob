@@ -111,7 +111,7 @@ class ParentsSection extends StatelessWidget {
                 color: AppColors.brand,
                 title: p.fullName.isEmpty ? 'Parent' : p.fullName,
                 subtitle: [
-                  if (p.relation.isNotEmpty) p.relation.toUpperCase(),
+                  if (p.relation.isNotEmpty) p.relation[0].toUpperCase() + p.relation.substring(1).toLowerCase(),
                   if (p.phone.isNotEmpty) p.phone,
                   if (p.email.isNotEmpty) p.email,
                 ].join(' · '),

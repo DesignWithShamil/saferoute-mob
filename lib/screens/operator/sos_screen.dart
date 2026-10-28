@@ -46,7 +46,7 @@ class _SosScreenState extends State<SosScreen> with SingleTickerProviderStateMix
                             Icon(Icons.warning_amber_rounded, color: AppColors.red, size: 16),
                             SizedBox(width: 6),
                             Text('EMERGENCY ONLY',
-                                style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w800, fontSize: 11.5, letterSpacing: 0.8)),
+                                style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w800, fontSize: 12.5)),
                           ],
                         ),
                       ),
@@ -91,7 +91,7 @@ class _SosScreenState extends State<SosScreen> with SingleTickerProviderStateMix
                           shape: BoxShape.circle,
                           gradient: const RadialGradient(
                             center: Alignment(-0.3, -0.4),
-                            colors: [Color(0xFFFF6B6E), AppColors.red, Color(0xFFB0171A)],
+                            colors: [Color(0xFFEF4444), AppColors.red, Color(0xFF991B1B)],
                             stops: [0, 0.55, 1],
                           ),
                           boxShadow: [BoxShadow(color: AppColors.red.withValues(alpha: 0.5), blurRadius: 28, offset: const Offset(0, 12))],

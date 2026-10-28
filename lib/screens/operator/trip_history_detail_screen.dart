@@ -51,7 +51,7 @@ class _TripHistoryDetailScreenState extends State<TripHistoryDetailScreen> {
         title: const Text('Trip attendance'),
       ),
       body: _loading
-          ? const LoadingView(label: 'Loading attendance…')
+          ? const LoadingView(label: 'Loading attendance…', skeleton: true)
           : _error != null
               ? ErrorView(message: _error!, onRetry: _load)
               : RefreshIndicator(

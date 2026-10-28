@@ -331,7 +331,7 @@ class _TripMapState extends State<TripMap> {
                     ),
                 ]),
                 const SimpleAttributionWidget(
-                  source: Text('OpenStreetMap contributors', style: TextStyle(fontSize: 10)),
+                  source: Text('OpenStreetMap contributors', style: TextStyle(fontSize: 11)),
                   backgroundColor: Color(0xCCFFFFFF),
                 ),
               ],
@@ -420,7 +420,7 @@ IconData _placeIcon(MapPlaceKind kind) => switch (kind) {
     };
 
 Color _placeColor(MapPlaceKind kind) => switch (kind) {
-      MapPlaceKind.school => const Color(0xFF7C3AED),
+      MapPlaceKind.school => AppColors.teal,
       MapPlaceKind.pickup => AppColors.amber,
       MapPlaceKind.drop => AppColors.green,
     };
@@ -456,7 +456,7 @@ class _StopMarker extends StatelessWidget {
     final departed = stop.status == TripStopStatus.departed;
     final school = stop.isSchoolAnchor;
     final Color fill = school
-        ? const Color(0xFF7C3AED)
+        ? AppColors.teal
         : departed
             ? AppColors.green
             : stop.isCurrent
@@ -465,7 +465,7 @@ class _StopMarker extends StatelessWidget {
                     ? AppColors.green
                     : stop.isRouteEnd
                         ? AppColors.brand
-                        : const Color(0xFFDBEAFE);
+                        : AppColors.brandTint;
     final Color border = stop.isHighlighted
         ? Colors.purple
         : (departed || stop.isCurrent || school ? Colors.white : AppColors.brand);
@@ -576,7 +576,7 @@ class _MapNote extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(6)),
-        child: Text(text, style: const TextStyle(fontSize: 11)),
+        child: Text(text, style: const TextStyle(fontSize: 12)),
       );
 }
 

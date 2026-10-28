@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../theme/sr_tokens.dart';
 import 'state_views.dart';
 
 /// Fade + slide-up entrance. Purely visual; plays once when first built.
@@ -11,8 +12,8 @@ class SrFadeIn extends StatelessWidget {
     super.key,
     required this.child,
     this.delay = Duration.zero,
-    this.duration = const Duration(milliseconds: 520),
-    this.offset = 22,
+    this.duration = const Duration(milliseconds: 300),
+    this.offset = 14,
   });
 
   final Widget child;
@@ -22,6 +23,7 @@ class SrFadeIn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (SrMotion.reduced(context)) return child;
     final total = duration + delay;
     final start = total.inMilliseconds == 0 ? 0.0 : delay.inMilliseconds / total.inMilliseconds;
     return TweenAnimationBuilder<double>(
@@ -37,49 +39,40 @@ class SrFadeIn extends StatelessWidget {
   }
 }
 
-/// Gentle endless up/down float (used for the hero bus icon).
-class SrFloating extends StatefulWidget {
-  const SrFloating({super.key, required this.child, this.distance = 8, this.period = const Duration(milliseconds: 2400)});
+/// Gentle one-time "settle" for the hero icon. (Previously an endless float;
+/// continuous animation drains budget phones and distracts, so it now plays
+/// once and respects reduced-motion settings.)
+class SrFloating extends StatelessWidget {
+  const SrFloating({super.key, required this.child, this.distance = 8, this.period = const Duration(milliseconds: 600)});
   final Widget child;
   final double distance;
   final Duration period;
 
   @override
-  State<SrFloating> createState() => _SrFloatingState();
-}
-
-class _SrFloatingState extends State<SrFloating> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: widget.period)..repeat(reverse: true);
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    if (SrMotion.reduced(context)) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 1, end: 0),
+      duration: period,
+      curve: Curves.easeOutCubic,
+      builder: (context, t, child) => Transform.translate(offset: Offset(0, -distance * t), child: child),
+      child: child,
+    );
   }
-
-  @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _c,
-        builder: (context, child) {
-          final t = Curves.easeInOutSine.transform(_c.value);
-          return Transform.translate(offset: Offset(0, -widget.distance * t), child: child);
-        },
-        child: widget.child,
-      );
 }
 
-/// Aurora palette used by the sign-in / registration pages.
+/// Brand gradients for the auth screens and featured buttons: navy to royal
+/// blue, with a restrained teal edge. No extra hues.
 class SrGradients {
   SrGradients._();
-  static const teal = Color(0xFF0A9E92);
-  static const violet = Color(0xFF6D3BEA);
+  static const teal = AppColors.teal;
   static const hero = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [teal, AppColors.brand, violet],
-    stops: [0.0, 0.52, 1.0],
+    colors: [AppColors.brandDeep, AppColors.brand, AppColors.teal],
+    stops: [0.0, 0.62, 1.0],
   );
-  static const button = LinearGradient(colors: [AppColors.brand, violet]);
+  static const button = LinearGradient(colors: [AppColors.brand, AppColors.brandDeep]);
 }
 
 class _WaveClipper extends CustomClipper<Path> {
@@ -110,7 +103,7 @@ class SrAuthBackground extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFE6F6F4), Color(0xFFEFF2FF), Color(0xFFF7F8FC)],
+            colors: [Color(0xFFE9F6F4), AppColors.brandTint, AppColors.bg],
           ),
         ),
         child: child,
@@ -163,15 +156,16 @@ class SrAuthHero extends StatelessWidget {
                       onTap: onBack,
                       radius: 26,
                       child: Container(
-                        width: 42,
-                        height: 42,
+                        width: SrSize.touch,
+                        height: SrSize.touch,
                         decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(14)),
-                        child: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                        child: const Tooltip(message: 'Back', child: Icon(Icons.arrow_back_rounded, color: Colors.white)),
                       ),
                     ),
                   ),
                 SizedBox(height: onBack != null ? 6 : 0),
-                SrFloating(
+                ExcludeSemantics(
+                  child: SrFloating(
                   child: Container(
                     width: compact ? 70 : 88,
                     height: compact ? 70 : 88,
@@ -183,16 +177,17 @@ class SrAuthHero extends StatelessWidget {
                     ),
                     child: Icon(icon, size: compact ? 38 : 48, color: Colors.white),
                   ),
+                  ),
                 ),
                 SizedBox(height: compact ? 14 : 18),
                 SrFadeIn(
-                  delay: const Duration(milliseconds: 150),
+                  delay: const Duration(milliseconds: 60),
                   child: Text(
                     title,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: compact ? 24 : 30,
-                      fontWeight: FontWeight.w900,
+                      fontSize: compact ? 24 : 28,
+                      fontWeight: FontWeight.w800,
                       letterSpacing: -0.8,
                       color: Colors.white,
                     ),
@@ -200,17 +195,17 @@ class SrAuthHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 SrFadeIn(
-                  delay: const Duration(milliseconds: 260),
+                  delay: const Duration(milliseconds: 100),
                   child: Text(
                     subtitle,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, height: 1.35, color: Colors.white.withValues(alpha: 0.86)),
+                    style: TextStyle(fontSize: 14.5, height: 1.4, color: Colors.white.withValues(alpha: 0.92)),
                   ),
                 ),
                 if (showFeatures) ...[
                   const SizedBox(height: 18),
                   SrFadeIn(
-                    delay: const Duration(milliseconds: 380),
+                    delay: const Duration(milliseconds: 140),
                     child: Wrap(
                       alignment: WrapAlignment.center,
                       spacing: 8,
@@ -259,9 +254,9 @@ class _FeaturePill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: Colors.white),
+            Icon(icon, size: 15, color: Colors.white),
             const SizedBox(width: 5),
-            Text(label, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white)),
+            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white))),
           ],
         ),
       );
@@ -277,9 +272,9 @@ class SrFormPanel extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(SrRadius.panel),
           border: Border.all(color: AppColors.border),
-          boxShadow: [BoxShadow(color: AppColors.ink.withValues(alpha: 0.07), blurRadius: 28, offset: const Offset(0, 14))],
+          boxShadow: [BoxShadow(color: AppColors.ink.withValues(alpha: 0.06), blurRadius: 24, offset: const Offset(0, 10))],
         ),
         child: child,
       );
@@ -303,51 +298,68 @@ class _SrPrimaryButtonState extends State<SrPrimaryButton> {
   @override
   Widget build(BuildContext context) {
     final enabled = widget.onPressed != null && !widget.busy;
-    return Listener(
-      onPointerDown: (_) => setState(() => _down = true),
-      onPointerUp: (_) => setState(() => _down = false),
-      onPointerCancel: (_) => setState(() => _down = false),
-      child: AnimatedScale(
-        scale: _down && enabled ? 0.97 : 1,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOut,
-        child: Container(
-          height: 56,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: enabled || widget.busy
-                ? SrGradients.button
-                : LinearGradient(colors: [AppColors.brand.withValues(alpha: 0.4), SrGradients.violet.withValues(alpha: 0.4)]),
-            boxShadow: enabled
-                ? [BoxShadow(color: SrGradients.violet.withValues(alpha: 0.30), blurRadius: 16, offset: const Offset(0, 8))]
-                : null,
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(18),
-              onTap: enabled ? widget.onPressed : null,
-              child: Center(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: widget.busy
-                      ? const SizedBox(
-                          key: ValueKey('busy'),
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
-                        )
-                      : Row(
-                          key: const ValueKey('label'),
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(widget.label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
-                            if (widget.icon != null) ...[
-                              const SizedBox(width: 8),
-                              Icon(widget.icon, color: Colors.white, size: 20),
-                            ],
-                          ],
-                        ),
+    final radius = BorderRadius.circular(SrRadius.button + 2);
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: widget.busy ? '${widget.label}, please wait' : widget.label,
+      excludeSemantics: true,
+      child: Listener(
+        onPointerDown: (_) => setState(() => _down = true),
+        onPointerUp: (_) => setState(() => _down = false),
+        onPointerCancel: (_) => setState(() => _down = false),
+        child: AnimatedScale(
+          scale: _down && enabled ? 0.98 : 1,
+          duration: SrMotion.of(context, const Duration(milliseconds: 110)),
+          curve: Curves.easeOut,
+          child: Container(
+            // minHeight (not height) so the label can grow with large system text.
+            constraints: const BoxConstraints(minHeight: SrSize.buttonHeight + 4),
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              gradient: enabled || widget.busy
+                  ? SrGradients.button
+                  : LinearGradient(colors: [AppColors.brand.withValues(alpha: 0.4), AppColors.brandDeep.withValues(alpha: 0.4)]),
+              boxShadow: enabled
+                  ? [BoxShadow(color: AppColors.brand.withValues(alpha: 0.26), blurRadius: 14, offset: const Offset(0, 6))]
+                  : null,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: radius,
+                onTap: enabled ? widget.onPressed : null,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  child: Center(
+                    child: AnimatedSwitcher(
+                      duration: SrMotion.of(context, SrMotion.base),
+                      child: widget.busy
+                          ? const SizedBox(
+                              key: ValueKey('busy'),
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
+                            )
+                          : Row(
+                              key: const ValueKey('label'),
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    widget.label,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
+                                  ),
+                                ),
+                                if (widget.icon != null) ...[
+                                  const SizedBox(width: 8),
+                                  Icon(widget.icon, color: Colors.white, size: 20),
+                                ],
+                              ],
+                            ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -396,13 +408,9 @@ class _SrClockHeaderState extends State<SrClockHeader> {
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.ink, Color(0xFF1B2A6B), AppColors.brand],
-          ),
-          boxShadow: [BoxShadow(color: AppColors.brand.withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 10))],
+          borderRadius: BorderRadius.circular(SrRadius.panel),
+          gradient: AppColors.heroGradient,
+          boxShadow: [BoxShadow(color: AppColors.brandDeep.withValues(alpha: 0.22), blurRadius: 18, offset: const Offset(0, 8))],
         ),
         child: Row(
           children: [
@@ -428,7 +436,7 @@ class _SrClockHeaderState extends State<SrClockHeader> {
                     DateFormat('EEEE, d MMM y').format(_now),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12.5),
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.88), fontSize: 13),
                   ),
                 ],
               ),

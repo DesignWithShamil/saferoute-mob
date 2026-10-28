@@ -14,6 +14,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/home/operator_home_screen.dart';
 import 'screens/home/parent_home_screen.dart';
 import 'theme/saferoute_theme.dart';
+import 'theme/sr_tokens.dart';
 import 'widgets/state_views.dart';
 
 class SafeRouteApp extends StatelessWidget {
@@ -47,17 +48,18 @@ class SafeRouteApp extends StatelessWidget {
         scaffoldMessengerKey: services.messengerKey,
         theme: SafeRouteTheme.light(),
         builder: (context, child) {
-          // Keep layouts intact on very large system font sizes and
-          // stop content stretching edge-to-edge on tablets.
+          // Honour the user's system font size (accessibility) but cap it so
+          // fixed-structure widgets like the dock stay usable, and stop
+          // content stretching edge-to-edge on tablets.
           final mq = MediaQuery.of(context);
-          final scaler = mq.textScaler.clamp(minScaleFactor: 0.9, maxScaleFactor: 1.15);
+          final scaler = mq.textScaler.clamp(minScaleFactor: 0.9, maxScaleFactor: 1.4);
           return MediaQuery(
             data: mq.copyWith(textScaler: scaler),
             child: ColoredBox(
               color: AppColors.bg,
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 640),
+                  constraints: const BoxConstraints(maxWidth: SrSize.maxContentWidth),
                   child: child ?? const SizedBox.shrink(),
                 ),
               ),
@@ -160,6 +162,7 @@ class _PushBridgeState extends State<_PushBridge> {
   void _onForeground(ForegroundMessage m) {
     if (!mounted) return;
     context.read<NotificationsController>().refreshUnread();
+    context.read<NotificationsController>().load();
     final data = m.data;
     final canOpen = data.containsKey('trip_id') || data.containsKey('student_id');
     _s.messengerKey.currentState
@@ -171,11 +174,11 @@ class _PushBridgeState extends State<_PushBridge> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(m.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(m.title, style: const TextStyle(fontWeight: FontWeight.w700)),
             if (m.body.isNotEmpty) Text(m.body),
           ],
         ),
-        action: canOpen ? SnackBarAction(label: 'OPEN', onPressed: () => _s.deepLinks.open(data)) : null,
+        action: canOpen ? SnackBarAction(label: 'Open', onPressed: () => _s.deepLinks.open(data)) : null,
       ));
     if (data.containsKey('trip_id')) _s.deepLinks.operatorRefresh.value++;
   }

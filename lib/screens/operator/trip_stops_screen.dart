@@ -8,7 +8,7 @@ import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 import 'trip_widgets.dart';
 
-const _schoolColor = Color(0xFF7C3AED);
+const _schoolColor = AppColors.teal;
 
 /// All route stops with student counts — opened from the trip map header.
 class TripStopsScreen extends StatelessWidget {

@@ -175,7 +175,7 @@ class SelectedChildHeader extends StatelessWidget {
     final bus = child.student.pickupBus?.busNumber ?? child.student.dropBus?.busNumber;
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
-      color: const Color(0xFFEAF0FF),
+      color: AppColors.brandTint,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         child: Column(

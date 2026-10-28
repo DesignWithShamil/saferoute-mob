@@ -178,7 +178,7 @@ class _StaffMessageThreadScreenState extends State<StaffMessageThreadScreen> {
           child: ColoredBox(
             color: AppColors.slate.withValues(alpha: 0.04),
             child: _loading
-                ? const LoadingView(label: 'Loading announcements…')
+                ? const LoadingView(label: 'Loading announcements…', skeleton: true)
                 : _error != null
                     ? ErrorView(message: _error!, onRetry: _load)
                     : _messages.isEmpty
@@ -294,7 +294,7 @@ class _AnnouncementsHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.ink, AppColors.brandDeep, AppColors.brand],
+          colors: [AppColors.brandDeep, AppColors.brand],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),

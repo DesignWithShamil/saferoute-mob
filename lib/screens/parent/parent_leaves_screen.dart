@@ -79,7 +79,7 @@ class _ParentLeavesScreenState extends State<ParentLeavesScreen> {
           child: FutureBuilder<List<LeaveRequest>>(
             future: _future,
             builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) return const LoadingView(label: 'Loading leaves…');
+              if (snap.connectionState != ConnectionState.done) return const LoadingView(label: 'Loading leaves…', skeleton: true);
               if (snap.hasError) return ErrorView(message: describeError(snap.error!), onRetry: _reload);
               final rows = snap.data ?? const [];
               if (rows.isEmpty) {

@@ -192,7 +192,7 @@ class _SignedInShellState extends State<SignedInShell> with SingleTickerProvider
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      useSafeArea: true,
+      useSafeArea: false,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
       barrierColor: AppColors.ink.withValues(alpha: 0.45),
@@ -448,7 +448,7 @@ class _Orb extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF5B82FF), AppColors.brandDeep],
+              colors: [AppColors.brand, AppColors.brandDeep],
             ),
             boxShadow: [BoxShadow(color: AppColors.brand.withValues(alpha: 0.28), blurRadius: 10, offset: const Offset(0, 4))],
           ),
@@ -501,8 +501,8 @@ class _DockItem extends StatelessWidget {
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 220),
               style: TextStyle(
-                fontSize: 10,
-                letterSpacing: -0.1,
+                fontSize: 12,
+                letterSpacing: 0,
                 fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                 color: color,
               ),
@@ -546,19 +546,22 @@ class _MoreSheet extends StatelessWidget {
     }
     final initial = (user?.fullName.isNotEmpty == true) ? user!.fullName.characters.first.toUpperCase() : '?';
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-      decoration: BoxDecoration(
-        color: AppColors.bg,
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 30, offset: const Offset(0, 10))],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.bg,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          boxShadow: [
+            BoxShadow(color: Colors.black12, blurRadius: 24, offset: Offset(0, -6)),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Profile header
               Container(
@@ -567,7 +570,7 @@ class _MoreSheet extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [AppColors.ink, Color(0xFF1B2A6B), AppColors.brand],
+                    colors: [AppColors.brandDeep, AppColors.brand],
                   ),
                 ),
                 child: Column(
@@ -609,8 +612,8 @@ class _MoreSheet extends StatelessWidget {
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(20)),
                                     child: Text(
-                                      role.toUpperCase(),
-                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: Colors.white),
+                                      role,
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
                                     ),
                                   ),
                                   if (school != null) ...[
@@ -642,8 +645,8 @@ class _MoreSheet extends StatelessWidget {
                     const Padding(
                       padding: EdgeInsets.only(left: 4, bottom: 10),
                       child: Text(
-                        'QUICK ACCESS',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: AppColors.slate),
+                        'Quick access',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.slate),
                       ),
                     ),
                     LayoutBuilder(
@@ -680,7 +683,7 @@ class _MoreSheet extends StatelessWidget {
                           borderRadius: BorderRadius.circular(18),
                           onTap: onLogout,
                           child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 14),
+                            padding: EdgeInsets.symmetric(vertical: 16),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -700,7 +703,8 @@ class _MoreSheet extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
@@ -742,7 +746,7 @@ class _MoreTile extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(color: AppColors.red, borderRadius: BorderRadius.circular(10)),
-                      child: Text('$badge', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                      child: Text('$badge', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
                     ),
                 ],
               ),
@@ -751,7 +755,7 @@ class _MoreTile extends StatelessWidget {
                 item.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5, color: destructive ? AppColors.red : AppColors.ink),
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: destructive ? AppColors.red : AppColors.ink),
               ),
             ],
           ),

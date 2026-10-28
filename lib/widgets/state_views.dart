@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../theme/sr_tokens.dart';
+
 class LoadingView extends StatelessWidget {
-  const LoadingView({super.key, this.label, this.branded = false});
+  const LoadingView({super.key, this.label, this.branded = false, this.skeleton = false});
   final String? label;
   final bool branded;
 
+  /// Show placeholder rows instead of a spinner (use for list screens).
+  final bool skeleton;
+
   @override
   Widget build(BuildContext context) {
+    if (skeleton) return SrSkeletonList(label: label);
     if (branded) {
       return Center(
         child: Column(
@@ -119,41 +125,98 @@ class EmptyView extends StatelessWidget {
   }
 }
 
-/// Small colored status pill, used for trip, stop and attendance statuses.
+/// Status pill used for trip, stop and attendance statuses. The wording always
+/// carries the meaning (colour is only reinforcement) and raw backend codes
+/// such as `IN_PROGRESS` are shown in sentence case.
 class StatusChip extends StatelessWidget {
-  const StatusChip({super.key, required this.label, required this.color});
+  const StatusChip({super.key, required this.label, required this.color, this.icon});
   final String label;
   final Color color;
+  final IconData? icon;
+
+  static String _pretty(String raw) {
+    final t = raw.trim();
+    if (t.isEmpty || t != t.toUpperCase()) return t;
+    final words = t.replaceAll('_', ' ').toLowerCase();
+    return words[0].toUpperCase() + words.substring(1);
+  }
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-            const SizedBox(width: 6),
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+  Widget build(BuildContext context) {
+    final text = _pretty(label);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null)
+            Icon(icon, size: 14, color: AppColors.onTint(color))
+          else
+            Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: AppColors.onTint(color), fontSize: 12, fontWeight: FontWeight.w700, height: 1.2),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 }
 
+/// SafeRoute colour tokens. Names are kept stable so every screen inherits the
+/// palette; only the values below define the brand.
 class AppColors {
   AppColors._();
-  static const brand = Color(0xFF2B59FF);
-  static const brandDeep = Color(0xFF1536B8);
-  static const ink = Color(0xFF0B1220);
-  static const bg = Color(0xFFF3F5FA);
-  static const border = Color(0xFFE6EAF3);
-  static const green = Color(0xFF12A66B);
+
+  /// Primary action colour (royal blue).
+  static const brand = Color(0xFF2563EB);
+
+  /// Brand navy: headers, hero cards, selected-state text on tints.
+  static const brandDeep = Color(0xFF163A70);
+
+  /// Secondary accent (teal).
+  static const teal = Color(0xFF0F9D8A);
+
+  /// Primary text (dark navy).
+  static const ink = Color(0xFF172B4D);
+
+  /// App background.
+  static const bg = Color(0xFFF5F7FB);
+
+  /// Hairlines and card borders.
+  static const border = Color(0xFFE2E8F0);
+
+  /// Secondary text. Slightly darker than slate-500 so it keeps 4.5:1
+  /// contrast on [bg] as well as on white.
+  static const slate = Color(0xFF59687F);
+
+  static const green = Color(0xFF16A34A);
   static const amber = Color(0xFFF59E0B);
-  static const red = Color(0xFFE5383B);
-  static const slate = Color(0xFF5B6579);
+  static const red = Color(0xFFDC2626);
+  static const info = Color(0xFF0284C7);
+
+  /// Light brand tint for selected chips, icon tiles and highlights.
+  static const brandTint = Color(0xFFE8EEFC);
+
+  /// Brand hero gradient for the few featured cards (welcome, profile).
+  static const heroGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [brandDeep, brand],
+  );
+
+  /// A readable text colour for [c] on a pale tint of itself. Mid-tone status
+  /// colours (green, amber) fail contrast as text, so darken them.
+  static Color onTint(Color c) {
+    final hsl = HSLColor.fromColor(c);
+    return hsl.withLightness((hsl.lightness * 0.62).clamp(0.0, 0.34)).toColor();
+  }
 
   static Color forStatus(String status) => switch (status) {
         'IN_PROGRESS' || 'BOARDED' || 'DEPARTED' || 'DROP_VERIFIED' || 'ACTIVE' => green,
@@ -210,16 +273,19 @@ class _EnterAnimation extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: 1),
-        duration: const Duration(milliseconds: 420),
-        curve: Curves.easeOutCubic,
-        builder: (context, t, child) => Opacity(
-          opacity: t,
-          child: Transform.translate(offset: Offset(0, (1 - t) * 14), child: child),
-        ),
-        child: child,
-      );
+  Widget build(BuildContext context) {
+    if (SrMotion.reduced(context)) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: SrMotion.slow,
+      curve: SrMotion.curve,
+      builder: (context, t, child) => Opacity(
+        opacity: t,
+        child: Transform.translate(offset: Offset(0, (1 - t) * 10), child: child),
+      ),
+      child: child,
+    );
+  }
 }
 
 Future<bool> confirmDialog(BuildContext context,
@@ -250,4 +316,93 @@ void showSnack(BuildContext context, String message, {bool error = false}) {
       backgroundColor: error ? AppColors.red : null,
       behavior: SnackBarBehavior.floating,
     ));
+}
+
+/// Placeholder rows shown while a list loads. A single gentle pulse (disabled
+/// when the OS asks for reduced motion) keeps the cost low on budget phones.
+class SrSkeletonList extends StatefulWidget {
+  const SrSkeletonList({super.key, this.count = 6, this.label});
+  final int count;
+  final String? label;
+
+  @override
+  State<SrSkeletonList> createState() => _SrSkeletonListState();
+}
+
+class _SrSkeletonListState extends State<SrSkeletonList> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100));
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduced = SrMotion.reduced(context);
+    if (reduced && _started) {
+      _c.stop();
+      _started = false;
+    } else if (!reduced && !_started) {
+      _c.repeat(reverse: true);
+      _started = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: widget.label ?? 'Loading',
+      liveRegion: true,
+      child: ExcludeSemantics(
+        child: ListView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.all(SrSpace.gutter(context)),
+          itemCount: widget.count,
+          itemBuilder: (context, i) => FadeTransition(
+            opacity: Tween<double>(begin: 0.55, end: 1).animate(_c),
+            child: const _SkeletonRow(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SkeletonRow extends StatelessWidget {
+  const _SkeletonRow();
+
+  @override
+  Widget build(BuildContext context) {
+    const block = Color(0xFFE6EBF3);
+    Widget bar(double? w, double h) => Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(color: block, borderRadius: BorderRadius.circular(6)),
+        );
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(SrRadius.card),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(width: 48, height: 48, decoration: BoxDecoration(color: block, borderRadius: BorderRadius.circular(14))),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [bar(160, 14), const SizedBox(height: 10), bar(null, 12), const SizedBox(height: 8), bar(90, 12)],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

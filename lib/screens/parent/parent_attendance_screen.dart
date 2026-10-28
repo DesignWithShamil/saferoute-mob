@@ -55,7 +55,7 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
           child: FutureBuilder<List<AttendanceRecord>>(
             future: _history,
             builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) return const LoadingView(label: 'Loading attendance…');
+              if (snap.connectionState != ConnectionState.done) return const LoadingView(label: 'Loading attendance…', skeleton: true);
               if (snap.hasError) return ErrorView(message: describeError(snap.error!), onRetry: _reload);
               final rows = snap.data ?? const [];
               if (rows.isEmpty) {

@@ -94,7 +94,7 @@ class _OperatorStudentDetailScreenState extends State<OperatorStudentDetailScree
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFFF4DB),
+                                  color: AppColors.amber.withValues(alpha: 0.14),
                                   borderRadius: BorderRadius.circular(18),
                                   border: Border.all(color: AppColors.amber.withValues(alpha: 0.35)),
                                 ),

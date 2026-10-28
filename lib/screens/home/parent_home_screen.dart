@@ -136,7 +136,7 @@ class _HomeTabState extends State<_HomeTab> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final c = context.watch<ParentController>();
-    if (c.loading && c.children.isEmpty) return const LoadingView(label: 'Loading your children…');
+    if (c.loading && c.children.isEmpty) return const LoadingView(label: 'Loading your children…', skeleton: true);
     if (c.error != null && c.children.isEmpty) return ErrorView(message: c.error!, onRetry: c.load);
     final link = c.selectedChild;
     if (link == null) {
