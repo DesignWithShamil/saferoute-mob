@@ -164,21 +164,64 @@ class _PushBridgeState extends State<_PushBridge> {
     context.read<NotificationsController>().refreshUnread();
     context.read<NotificationsController>().load();
     final data = m.data;
-    final canOpen = data.containsKey('trip_id') || data.containsKey('student_id');
     _s.messengerKey.currentState
       ?..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 6),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(m.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-            if (m.body.isNotEmpty) Text(m.body),
-          ],
+        duration: const Duration(seconds: 5),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        backgroundColor: AppColors.ink,
+        content: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            _s.messengerKey.currentState?.hideCurrentSnackBar();
+            _s.deepLinks.open(data);
+          },
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.brand.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      m.title,
+                      style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (m.body.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          m.body,
+                          style: const TextStyle(color: Color(0xFFD1D5DB), fontSize: 13),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        action: canOpen ? SnackBarAction(label: 'Open', onPressed: () => _s.deepLinks.open(data)) : null,
+        action: SnackBarAction(
+          label: 'Open',
+          textColor: const Color(0xFF93C5FD),
+          onPressed: () => _s.deepLinks.open(data),
+        ),
       ));
     if (data.containsKey('trip_id')) _s.deepLinks.operatorRefresh.value++;
   }

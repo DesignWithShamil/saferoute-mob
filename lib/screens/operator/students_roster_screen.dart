@@ -216,7 +216,7 @@ class _StudentsRosterScreenState extends State<StudentsRosterScreen> {
                         if (_lookup!.afternoonBus != null) 'Evening ${_lookup!.afternoonBus} · ${_lookup!.afternoonStop ?? ''}',
                       ],
                       onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => OperatorStudentDetailScreen(studentId: _lookup!.publicId),
+                        builder: (_) => OperatorStudentDetailScreen(studentId: _lookup!.publicId, lookupInfo: _lookup),
                       )),
                     ),
                   ),

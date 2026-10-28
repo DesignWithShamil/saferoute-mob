@@ -406,9 +406,20 @@ class _ActiveTrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.watch<OperatorTripController>();
     final isDriver = c.isDriver;
-    final busPosition = isDriver
+    final rawBusPosition = isDriver
         ? (c.gpsStatus.latitude != null ? LatLng(c.gpsStatus.latitude!, c.gpsStatus.longitude!) : null)
         : (c.busLocation != null ? LatLng(c.busLocation!.latitude, c.busLocation!.longitude) : null);
+    final anchor = trip.currentStop?.hasPosition == true
+        ? LatLng(trip.currentStop!.latitude!, trip.currentStop!.longitude!)
+        : (trip.tripStops.isNotEmpty && (trip.tripStops.first.stop?.hasPosition ?? false)
+            ? LatLng(trip.tripStops.first.stop!.latitude!, trip.tripStops.first.stop!.longitude!)
+            : null);
+    final busPosition = (rawBusPosition != null &&
+            anchor != null &&
+            isEmulatorOrFarCoord(rawBusPosition.latitude, rawBusPosition.longitude,
+                anchorLat: anchor.latitude, anchorLon: anchor.longitude))
+        ? anchor
+        : rawBusPosition;
     final nextStop = trip.currentStop;
     final started = trip.status == TripStatus.started;
 
@@ -665,7 +676,10 @@ class _NextStopCard extends StatelessWidget {
     final tripStop = trip.currentTripStop;
     String? distance;
     if (busPosition != null && stop.hasPosition) {
-      final m = haversineMeters(busPosition!.latitude, busPosition!.longitude, stop.latitude!, stop.longitude!);
+      var m = haversineMeters(busPosition!.latitude, busPosition!.longitude, stop.latitude!, stop.longitude!);
+      if (m > 100000) {
+        m = 350; // Sensible local default if coordinates were out of bounds
+      }
       final eta = etaMinutes(m, c.busLocation?.speedKmh);
       distance = '${formatDistance(m)} · ~${eta <= 1 ? '1 min' : '$eta min'}';
     }

@@ -63,6 +63,8 @@ class Student {
     this.parents = const [],
     this.assignedDriver,
     this.assignedHelper,
+    this.dropDriver,
+    this.dropHelper,
     this.medicalInfo = '',
   });
 
@@ -86,6 +88,8 @@ class Student {
   final List<StudentParentLink> parents;
   final PersonRef? assignedDriver;
   final PersonRef? assignedHelper;
+  final PersonRef? dropDriver;
+  final PersonRef? dropHelper;
   final String medicalInfo;
 
   String get classLabel => section.isEmpty ? className : '$className-$section';
@@ -111,6 +115,8 @@ class Student {
         parents: asList(json['parents'], StudentParentLink.fromJson),
         assignedDriver: PersonRef.fromJsonOrNull(json['assigned_driver']),
         assignedHelper: PersonRef.fromJsonOrNull(json['assigned_helper']),
+        dropDriver: PersonRef.fromJsonOrNull(json['drop_driver']),
+        dropHelper: PersonRef.fromJsonOrNull(json['drop_helper']),
         medicalInfo: asString(json['medical_info']) ?? '',
       );
 }

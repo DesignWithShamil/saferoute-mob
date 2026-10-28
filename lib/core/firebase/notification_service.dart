@@ -98,6 +98,11 @@ class NotificationService {
     }
     try {
       if (Firebase.apps.isEmpty) await Firebase.initializeApp(options: Env.firebaseOptions);
+      await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
       FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
       FirebaseMessaging.onMessage.listen((m) async {
         final title = m.notification?.title ?? (m.data['title']?.toString() ?? 'SafeRoute');
@@ -118,16 +123,23 @@ class NotificationService {
             id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
             title: title,
             body: body,
-            notificationDetails: const NotificationDetails(
+            notificationDetails: NotificationDetails(
               android: AndroidNotificationDetails(
                 NotificationChannels.alertsId,
                 'Trip & student alerts',
-                channelDescription: 'Trip started, bus approaching, pickup/drop and emergency alerts.',
+                channelDescription: 'Trip started, bus approaching, pickup/drop, announcements and emergency alerts.',
                 importance: Importance.max,
                 priority: Priority.high,
                 icon: '@mipmap/ic_launcher',
+                playSound: true,
+                enableVibration: true,
+                styleInformation: BigTextStyleInformation(
+                  body,
+                  contentTitle: title,
+                  summaryText: data['school_name'] ?? data['type'],
+                ),
               ),
-              iOS: DarwinNotificationDetails(
+              iOS: const DarwinNotificationDetails(
                 presentAlert: true,
                 presentBadge: true,
                 presentSound: true,
@@ -215,13 +227,31 @@ class NotificationService {
     }
   }
 
-  Future<void> _register(String token) async {
+  /// Ensures the current device token is registered with the Django backend.
+  Future<void> ensureRegistered() async {
+    if (!_firebaseReady) await init();
+    if (!_firebaseReady) return;
     try {
-      await _repository.registerDevice(token, Platform.isIOS ? 'IOS' : 'ANDROID');
-      await _storage.setRegisteredFcmToken(token);
-      debugPrint('Device successfully registered with backend FCM.');
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null && token.isNotEmpty) {
+        await _register(token);
+      }
     } catch (e) {
-      debugPrint('Backend device registration failed: $e');
+      debugPrint('ensureRegistered error: $e');
+    }
+  }
+
+  Future<void> _register(String token) async {
+    for (var attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await _repository.registerDevice(token, Platform.isIOS ? 'IOS' : 'ANDROID');
+        await _storage.setRegisteredFcmToken(token);
+        debugPrint('✅ Device successfully registered with backend FCM.');
+        return;
+      } catch (e) {
+        debugPrint('⚠️ Backend device registration attempt $attempt failed: $e');
+        if (attempt < 2) await Future.delayed(const Duration(seconds: 2));
+      }
     }
   }
 

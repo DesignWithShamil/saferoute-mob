@@ -56,14 +56,25 @@ class DeepLinkRouter {
     final studentId = _nonEmpty(data['student_id']);
     final conversationId = _nonEmpty(data['conversation_id']);
 
+    final isAnnouncement = data['kind'] == 'school_announcement' ||
+        data['type'] == 'ANNOUNCEMENT' ||
+        data['type'] == 'STAFF_MESSAGE' ||
+        data['type'] == 'HOLIDAY_NOTICE';
+    final isAlert = data['type'] == 'EMERGENCY_ALERT' ||
+        data['type'] == 'BUS_DELAYED' ||
+        data['type'] == 'TRIP_CANCELLED';
+    final targetCategory = isAnnouncement
+        ? 'ANNOUNCEMENTS'
+        : (isAlert ? 'ALERTS' : 'ALL');
+
     switch (user.role) {
       case UserRole.parent:
         if (tripId != null) {
           navigator.push(MaterialPageRoute(builder: (_) => LiveTripScreen(tripId: tripId, studentId: studentId)));
-        } else if (studentId != null) {
+        } else if (studentId != null && !isAnnouncement) {
           navigator.push(MaterialPageRoute(builder: (_) => ChildDetailScreen(studentId: studentId)));
         } else {
-          navigator.push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+          navigator.push(MaterialPageRoute(builder: (_) => NotificationsScreen(initialCategory: targetCategory)));
         }
       case UserRole.driver:
       case UserRole.helper:
@@ -72,7 +83,7 @@ class DeepLinkRouter {
         } else if (tripId != null || data['type'] == 'DRIVER_ASSIGNED') {
           operatorRefresh.value++;
         } else {
-          navigator.push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+          navigator.push(MaterialPageRoute(builder: (_) => NotificationsScreen(initialCategory: targetCategory)));
         }
       default:
         break;

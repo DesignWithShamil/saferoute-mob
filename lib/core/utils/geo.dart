@@ -27,3 +27,18 @@ String formatAge(Duration? age) {
   if (age.inMinutes < 60) return '${age.inMinutes}m ago';
   return 'a while ago';
 }
+
+/// Checks whether a coordinate is the Android Emulator default (Mountain View, CA ~37.422, -122.084)
+/// or unreasonably far (> 300 km) from an anchor point (e.g. school or route stops).
+bool isEmulatorOrFarCoord(double lat, double lon, {double? anchorLat, double? anchorLon}) {
+  if ((lat - 37.422).abs() < 0.1 && (lon - (-122.084)).abs() < 0.1) {
+    return true;
+  }
+  if (anchorLat != null && anchorLon != null) {
+    final dist = haversineMeters(lat, lon, anchorLat, anchorLon);
+    if (dist > 300000) {
+      return true;
+    }
+  }
+  return false;
+}

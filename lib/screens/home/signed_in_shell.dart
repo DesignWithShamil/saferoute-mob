@@ -98,6 +98,8 @@ class _SignedInShellState extends State<SignedInShell> with SingleTickerProvider
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       context.read<NotificationsController>().refreshUnread();
+      context.read<NotificationsController>().load();
+      context.read<AppServices>().notificationService.ensureRegistered();
     }
   }
 
