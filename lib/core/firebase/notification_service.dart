@@ -118,11 +118,15 @@ class NotificationService {
           }
         }
 
+        final notifTitle = title.trim().isNotEmpty ? title : 'SafeRoute';
+        final notifBody = body.trim().isNotEmpty ? body : 'New notification';
+        final notifIntId = (DateTime.now().millisecondsSinceEpoch % 100000);
+
         try {
           await _local.show(
-            id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            title: title,
-            body: body,
+            id: notifIntId,
+            title: notifTitle,
+            body: notifBody,
             notificationDetails: NotificationDetails(
               android: AndroidNotificationDetails(
                 NotificationChannels.alertsId,
@@ -133,9 +137,11 @@ class NotificationService {
                 icon: '@mipmap/ic_launcher',
                 playSound: true,
                 enableVibration: true,
+                visibility: NotificationVisibility.public,
+                ticker: notifTitle,
                 styleInformation: BigTextStyleInformation(
-                  body,
-                  contentTitle: title,
+                  notifBody,
+                  contentTitle: notifTitle,
                   summaryText: data['school_name'] ?? data['type'],
                 ),
               ),
@@ -266,10 +272,16 @@ class NotificationService {
         );
       }
       try {
-        await _local
-            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-            ?.requestNotificationsPermission();
-      } catch (_) {}
+        final android = _local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+        if (android != null) {
+          final enabled = await android.areNotificationsEnabled();
+          if (enabled != true) {
+            await android.requestNotificationsPermission();
+          }
+        }
+      } catch (e) {
+        debugPrint('Android notification permission check failed: $e');
+      }
     } catch (e) {
       debugPrint('Notification system permission check failed: $e');
     }

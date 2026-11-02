@@ -51,7 +51,6 @@ class DeepLinkRouter {
       _notifications.markRead(notificationId).catchError((_) {});
     }
 
-    navigator.popUntil((route) => route.isFirst);
     final tripId = _nonEmpty(data['trip_id']);
     final studentId = _nonEmpty(data['student_id']);
     final conversationId = _nonEmpty(data['conversation_id']);
@@ -67,26 +66,40 @@ class DeepLinkRouter {
         ? 'ANNOUNCEMENTS'
         : (isAlert ? 'ALERTS' : 'ALL');
 
+    Widget? destination;
+
     switch (user.role) {
       case UserRole.parent:
         if (tripId != null) {
-          navigator.push(MaterialPageRoute(builder: (_) => LiveTripScreen(tripId: tripId, studentId: studentId)));
+          destination = LiveTripScreen(tripId: tripId, studentId: studentId);
         } else if (studentId != null && !isAnnouncement) {
-          navigator.push(MaterialPageRoute(builder: (_) => ChildDetailScreen(studentId: studentId)));
+          destination = ChildDetailScreen(studentId: studentId);
         } else {
-          navigator.push(MaterialPageRoute(builder: (_) => NotificationsScreen(initialCategory: targetCategory)));
+          destination = NotificationsScreen(initialCategory: targetCategory);
         }
       case UserRole.driver:
       case UserRole.helper:
         if (conversationId != null) {
-          navigator.push(MaterialPageRoute(builder: (_) => StaffMessageThreadScreen(conversationId: conversationId)));
+          destination = Scaffold(
+            appBar: AppBar(title: const Text('School Announcements')),
+            body: StaffMessageThreadScreen(conversationId: conversationId),
+          );
         } else if (tripId != null || data['type'] == 'DRIVER_ASSIGNED') {
           operatorRefresh.value++;
+          navigator.popUntil((route) => route.isFirst);
+          return;
         } else {
-          navigator.push(MaterialPageRoute(builder: (_) => NotificationsScreen(initialCategory: targetCategory)));
+          destination = NotificationsScreen(initialCategory: targetCategory);
         }
       default:
         break;
+    }
+
+    if (destination != null) {
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => destination!),
+        (route) => route.isFirst,
+      );
     }
   }
 

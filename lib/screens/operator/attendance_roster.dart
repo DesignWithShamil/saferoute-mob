@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api/api_exception.dart';
 import '../../models/student.dart';
 import '../../providers/operator_trip_controller.dart';
 import '../../utils/attendance_display.dart';
@@ -496,41 +497,116 @@ class _DropPinDialogState extends State<_DropPinDialog> {
 /// Same flow as the web: confirm, optional description, POST /emergency/sos/.
 Future<void> showSosFlow(BuildContext context) async {
   final controller = context.read<OperatorTripController>();
-  final message = TextEditingController();
-  final send = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      icon: const Icon(Icons.warning_amber_rounded, color: AppColors.red, size: 36),
-      title: const Text('Send emergency alert?'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('The school will be alerted immediately with your bus\'s last known location.'),
-          const SizedBox(height: 12),
-          TextField(
-            controller: message,
-            maxLines: 2,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              labelText: 'Briefly describe the emergency (optional)',
-            ),
+
+  if (!controller.hasActiveTrip) {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.info_outline_rounded, color: AppColors.brand, size: 38),
+        title: const Text('No Active Trip'),
+        content: const Text(
+          'Emergency SOS broadcasts your live bus GPS coordinates to the school administration during an active trip.\n\n'
+          'Please start your scheduled trip to enable live tracking, or contact the school office directly for urgent assistance.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Understood'),
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: AppColors.red),
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('SEND SOS'),
+    );
+    return;
+  }
+
+  final messageController = TextEditingController();
+  bool isSending = false;
+  String? sendError;
+
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded, color: AppColors.red, size: 36),
+        title: const Text('Send emergency alert?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'The school administration and parents will be alerted immediately with your bus\'s live GPS location.',
+              style: TextStyle(fontSize: 13.5, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: messageController,
+              enabled: !isSending,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Briefly describe the emergency (optional)',
+              ),
+            ),
+            if (sendError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  sendError!,
+                  style: const TextStyle(color: AppColors.red, fontSize: 12.5, fontWeight: FontWeight.w600),
+                ),
+              ),
+          ],
         ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: isSending ? null : () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+            onPressed: isSending
+                ? null
+                : () async {
+                    setDialogState(() {
+                      isSending = true;
+                      sendError = null;
+                    });
+                    final text = messageController.text.trim();
+                    try {
+                      final err = await controller.raiseSos(text).timeout(
+                            const Duration(seconds: 10),
+                            onTimeout: () => 'Request timed out. Check your network connection.',
+                          );
+                      if (err != null) {
+                        setDialogState(() {
+                          isSending = false;
+                          sendError = err;
+                        });
+                        return;
+                      }
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        showSnack(context, '🚨 Emergency alert broadcast to the school.');
+                      }
+                    } catch (e) {
+                      setDialogState(() {
+                        isSending = false;
+                        sendError = describeError(e);
+                      });
+                    }
+                  },
+            child: isSending
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : const Text('SEND SOS'),
+          ),
+        ],
+      ),
     ),
   );
-  final text = message.text.trim();
-  message.dispose();
-  if (send != true) return;
-  final err = await controller.raiseSos(text);
-  if (!context.mounted) return;
-  showSnack(context, err ?? 'Emergency alert sent to the school.', error: err != null);
+  messageController.dispose();
 }

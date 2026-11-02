@@ -385,9 +385,10 @@ class _NotificationTile extends StatelessWidget {
 
     final hasTrip = item.data.containsKey('trip_id') && item.data['trip_id']!.isNotEmpty;
     final hasStudent = item.data.containsKey('student_id') && item.data['student_id']!.isNotEmpty;
-    final hasConv = item.data.containsKey('conversation_id') && item.data['conversation_id']!.isNotEmpty;
 
-    if (hasTrip || hasConv || (hasStudent && !_isAnnouncement)) {
+    // Announcements and broadcast notices should open the detailed modal sheet cleanly
+    // instead of triggering a destructive route pop and animation clash.
+    if (!_isAnnouncement && (hasTrip || hasStudent)) {
       context.read<AppServices>().deepLinks.open({...item.data, 'type': item.type});
     } else {
       _showDetailSheet(context);
