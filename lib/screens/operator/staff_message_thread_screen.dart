@@ -157,12 +157,10 @@ class _StaffMessageThreadScreenState extends State<StaffMessageThreadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _AnnouncementsHeader(readOnly: widget.readOnly, clearing: _clearing, onClearInbox: _clearInbox),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _AnnouncementsHeader(readOnly: widget.readOnly, clearing: _clearing, onClearInbox: _clearInbox),
         _FilterBar(
           targetType: _targetType,
           targetOptions: _targetOptions,
@@ -217,9 +215,8 @@ class _StaffMessageThreadScreenState extends State<StaffMessageThreadScreen> {
           ),
         ),
       ],
-    ),
-  );
-}
+    );
+  }
 }
 
 class _FilterBar extends StatelessWidget {

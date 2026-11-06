@@ -186,7 +186,6 @@ class AuthController extends ChangeNotifier {
     status = AuthStatus.signedIn;
     _s.deepLinks.attachUser(me);
     _s.pusher.connect();
-    _s.notificationService.ensureRegistered();
     notifyListeners();
     if (me.isSupportedOnMobile) {
       try {

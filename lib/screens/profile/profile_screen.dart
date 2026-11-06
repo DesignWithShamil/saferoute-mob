@@ -366,7 +366,7 @@ class _ProfileViewState extends State<ProfileView> {
                 title: 'Sign out?',
                 message: warn
                     ? 'Live location sharing for the current trip will stop on this phone.'
-                    : 'You will need to sign in again to use SafeRoute.',
+                    : 'You will need to sign in again to use Ethiyo.',
                 confirm: 'Sign out',
                 destructive: warn,
               );

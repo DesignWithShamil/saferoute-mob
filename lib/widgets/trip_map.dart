@@ -90,7 +90,6 @@ class TripMap extends StatefulWidget {
     this.busDetails = const [],
     this.heightFraction = 0.3,
     this.followBusByDefault = true,
-    this.isFullScreen = false,
   });
 
   final List<MapStop> stops;
@@ -105,7 +104,6 @@ class TripMap extends StatefulWidget {
   /// still be scrolled on small phones (drags on the map pan the map).
   final double heightFraction;
   final bool followBusByDefault;
-  final bool isFullScreen;
 
   @override
   State<TripMap> createState() => _TripMapState();
@@ -118,25 +116,10 @@ class _TripMapState extends State<TripMap> {
   LatLng? _me;
   bool _locating = false;
 
-  LatLng? get _effectiveBus {
-    final bus = widget.bus;
-    if (bus == null) return null;
-    final anchor = widget.stops.isNotEmpty
-        ? widget.stops.first.position
-        : (widget.places.isNotEmpty ? widget.places.first.position : null);
-    if (anchor != null &&
-        isEmulatorOrFarCoord(bus.latitude, bus.longitude,
-            anchorLat: anchor.latitude, anchorLon: anchor.longitude)) {
-      final current = widget.stops.where((s) => s.isCurrent).firstOrNull;
-      return current?.position ?? anchor;
-    }
-    return bus;
-  }
-
   @override
   void didUpdateWidget(covariant TripMap oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final bus = _effectiveBus;
+    final bus = widget.bus;
     if (_ready && _follow && bus != null && bus != oldWidget.bus) {
       final zoom = _controller.camera.zoom;
       _controller.move(bus, oldWidget.bus == null && zoom < 15 ? 15 : zoom);
@@ -146,7 +129,7 @@ class _TripMapState extends State<TripMap> {
   List<LatLng> get _allPoints => [
         ...widget.stops.map((s) => s.position),
         ...widget.places.map((p) => p.position),
-        ?_effectiveBus,
+        ?widget.bus,
       ];
 
   void _fitAll() {
@@ -231,9 +214,7 @@ class _TripMapState extends State<TripMap> {
 
   @override
   Widget build(BuildContext context) {
-    final height = widget.isFullScreen
-        ? double.infinity
-        : (MediaQuery.sizeOf(context).height * widget.heightFraction).clamp(180.0, 420.0);
+    final height = (MediaQuery.sizeOf(context).height * widget.heightFraction).clamp(180.0, 420.0);
     final points = _allPoints;
     if (points.isEmpty) {
       return SizedBox(
@@ -249,29 +230,25 @@ class _TripMapState extends State<TripMap> {
     final current = widget.stops.where((s) => s.isCurrent).firstOrNull;
 
     return Container(
-      margin: widget.isFullScreen ? EdgeInsets.zero : const EdgeInsets.only(bottom: 4),
-      decoration: widget.isFullScreen
-          ? const BoxDecoration()
-          : BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.border, width: 1.5),
-              boxShadow: [
-                BoxShadow(color: AppColors.ink.withValues(alpha: 0.08), blurRadius: 18, offset: const Offset(0, 8))
-              ],
-            ),
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border, width: 1.5),
+        boxShadow: [BoxShadow(color: AppColors.ink.withValues(alpha: 0.08), blurRadius: 18, offset: const Offset(0, 8))],
+      ),
       child: ClipRRect(
-        borderRadius: widget.isFullScreen ? BorderRadius.zero : BorderRadius.circular(22.5),
-        child: SizedBox(
-          height: height,
-          child: Stack(
-            children: [
-              FlutterMap(
-                mapController: _controller,
-                options: MapOptions(
-                  initialCameraFit: points.length > 1 && !(_follow && _effectiveBus != null)
-                      ? CameraFit.bounds(bounds: LatLngBounds.fromPoints(points), padding: _fitPadding)
-                      : null,
-                  initialCenter: (_follow ? _effectiveBus : null) ?? points.first,
+      borderRadius: BorderRadius.circular(22.5),
+      child: SizedBox(
+        height: height,
+        child: Stack(
+          children: [
+            FlutterMap(
+              mapController: _controller,
+              options: MapOptions(
+                initialCameraFit: points.length > 1 && !(_follow && widget.bus != null)
+                    ? CameraFit.bounds(bounds: LatLngBounds.fromPoints(points), padding: _fitPadding)
+                    : null,
+                initialCenter: (_follow ? widget.bus : null) ?? points.first,
                 initialZoom: 15,
                 onMapReady: () => _ready = true,
                 onPositionChanged: (_, hasGesture) {
@@ -339,9 +316,9 @@ class _TripMapState extends State<TripMap> {
                       height: 48,
                       child: const _MeMarker(),
                     ),
-                  if (_effectiveBus != null)
+                  if (widget.bus != null)
                     Marker(
-                      point: _effectiveBus!,
+                      point: widget.bus!,
                       width: 44,
                       height: 44,
                       child: GestureDetector(
@@ -371,7 +348,7 @@ class _TripMapState extends State<TripMap> {
                     highlighted: _me != null,
                     onPressed: _locateMe,
                   ),
-                  if (_effectiveBus != null) ...[
+                  if (widget.bus != null) ...[
                     const SizedBox(height: 8),
                     _MapButton(
                       icon: Icons.directions_bus_rounded,
@@ -379,7 +356,7 @@ class _TripMapState extends State<TripMap> {
                       highlighted: _follow,
                       onPressed: () {
                         setState(() => _follow = true);
-                        _controller.move(_effectiveBus!, _controller.camera.zoom < 14 ? 15 : _controller.camera.zoom);
+                        _controller.move(widget.bus!, _controller.camera.zoom < 14 ? 15 : _controller.camera.zoom);
                       },
                     ),
                   ],
@@ -392,28 +369,6 @@ class _TripMapState extends State<TripMap> {
                       _fitAll();
                     },
                   ),
-                  if (!widget.isFullScreen) ...[
-                    const SizedBox(height: 8),
-                    _MapButton(
-                      icon: Icons.fullscreen_rounded,
-                      tooltip: 'Full screen map',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => FullScreenMapScreen(
-                              stops: widget.stops,
-                              places: widget.places,
-                              geometry: widget.geometry,
-                              bus: widget.bus,
-                              busIsStale: widget.busIsStale,
-                              busLabel: widget.busLabel,
-                              busDetails: widget.busDetails,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
                   if (height >= 300) ...[
                     const SizedBox(height: 8),
                     _MapButton(icon: Icons.add_rounded, tooltip: 'Zoom in', onPressed: () => _zoom(1)),
@@ -685,100 +640,4 @@ List<MapStop> mapStopsForTrip(
     );
   }
   return out;
-}
-
-/// Dedicated full-screen interactive map with floating controls and top info banner.
-class FullScreenMapScreen extends StatelessWidget {
-  const FullScreenMapScreen({
-    super.key,
-    this.stops = const [],
-    this.places = const [],
-    this.geometry,
-    this.bus,
-    this.busIsStale = false,
-    this.busLabel = 'Bus',
-    this.busDetails = const [],
-  });
-
-  final List<MapStop> stops;
-  final List<MapPlace> places;
-  final RouteGeometry? geometry;
-  final LatLng? bus;
-  final bool busIsStale;
-  final String busLabel;
-  final List<String> busDetails;
-
-  @override
-  Widget build(BuildContext context) {
-    final current = stops.where((s) => s.isCurrent).firstOrNull;
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: TripMap(
-              stops: stops,
-              places: places,
-              geometry: geometry,
-              bus: bus,
-              busIsStale: busIsStale,
-              busLabel: busLabel,
-              busDetails: busDetails,
-              isFullScreen: true,
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Material(
-                    color: Colors.white,
-                    shape: const CircleBorder(),
-                    elevation: 4,
-                    shadowColor: Colors.black26,
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () => Navigator.of(context).pop(),
-                      child: const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: Icon(Icons.arrow_back_rounded, color: AppColors.ink, size: 22),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  if (current != null)
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.95),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: const [
-                            BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.near_me_rounded, color: AppColors.brand, size: 18),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Next Stop: ${current.name}',
-                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.ink),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

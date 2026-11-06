@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-/// SafeRoute design tokens. Spacing, radii, sizes and motion live here so that
+/// Ethiyo design tokens. Spacing, radii, sizes and motion live here so that
 /// screens never invent one-off values. Colours live in `AppColors`
 /// (widgets/state_views.dart) and text styles in `SafeRouteTheme`.
 class SrSpace {
@@ -24,12 +24,12 @@ class SrSpace {
 
 class SrRadius {
   SrRadius._();
-  static const chip = 10.0;
-  static const input = 14.0;
-  static const button = 14.0;
-  static const card = 18.0;
-  static const panel = 24.0;
-  static const sheet = 28.0;
+  static const chip = 12.0;
+  static const input = 18.0;
+  static const button = 26.0; // pill at the standard 52dp height
+  static const card = 24.0;
+  static const panel = 28.0;
+  static const sheet = 32.0;
 }
 
 class SrSize {

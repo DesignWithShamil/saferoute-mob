@@ -51,55 +51,31 @@ class DeepLinkRouter {
       _notifications.markRead(notificationId).catchError((_) {});
     }
 
+    navigator.popUntil((route) => route.isFirst);
     final tripId = _nonEmpty(data['trip_id']);
     final studentId = _nonEmpty(data['student_id']);
     final conversationId = _nonEmpty(data['conversation_id']);
 
-    final isAnnouncement = data['kind'] == 'school_announcement' ||
-        data['type'] == 'ANNOUNCEMENT' ||
-        data['type'] == 'STAFF_MESSAGE' ||
-        data['type'] == 'HOLIDAY_NOTICE';
-    final isAlert = data['type'] == 'EMERGENCY_ALERT' ||
-        data['type'] == 'BUS_DELAYED' ||
-        data['type'] == 'TRIP_CANCELLED';
-    final targetCategory = isAnnouncement
-        ? 'ANNOUNCEMENTS'
-        : (isAlert ? 'ALERTS' : 'ALL');
-
-    Widget? destination;
-
     switch (user.role) {
       case UserRole.parent:
         if (tripId != null) {
-          destination = LiveTripScreen(tripId: tripId, studentId: studentId);
-        } else if (studentId != null && !isAnnouncement) {
-          destination = ChildDetailScreen(studentId: studentId);
+          navigator.push(MaterialPageRoute(builder: (_) => LiveTripScreen(tripId: tripId, studentId: studentId)));
+        } else if (studentId != null) {
+          navigator.push(MaterialPageRoute(builder: (_) => ChildDetailScreen(studentId: studentId)));
         } else {
-          destination = NotificationsScreen(initialCategory: targetCategory);
+          navigator.push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
         }
       case UserRole.driver:
       case UserRole.helper:
         if (conversationId != null) {
-          destination = Scaffold(
-            appBar: AppBar(title: const Text('School Announcements')),
-            body: StaffMessageThreadScreen(conversationId: conversationId),
-          );
+          navigator.push(MaterialPageRoute(builder: (_) => StaffMessageThreadScreen(conversationId: conversationId)));
         } else if (tripId != null || data['type'] == 'DRIVER_ASSIGNED') {
           operatorRefresh.value++;
-          navigator.popUntil((route) => route.isFirst);
-          return;
         } else {
-          destination = NotificationsScreen(initialCategory: targetCategory);
+          navigator.push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
         }
       default:
         break;
-    }
-
-    if (destination != null) {
-      navigator.pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => destination!),
-        (route) => route.isFirst,
-      );
     }
   }
 

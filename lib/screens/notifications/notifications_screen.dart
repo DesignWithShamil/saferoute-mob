@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/sr_tokens.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -12,8 +13,7 @@ import 'preferences_screen.dart';
 
 /// Stand-alone route (from a notification tap).
 class NotificationsScreen extends StatelessWidget {
-  const NotificationsScreen({super.key, this.initialCategory});
-  final String? initialCategory;
+  const NotificationsScreen({super.key});
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -31,7 +31,7 @@ class NotificationsScreen extends StatelessWidget {
             const MarkAllReadButton(),
           ],
         ),
-        body: NotificationsList(initialCategory: initialCategory),
+        body: const NotificationsList(),
       );
 }
 
@@ -82,8 +82,7 @@ class ClearAllNotificationsButton extends StatelessWidget {
 }
 
 class NotificationsList extends StatefulWidget {
-  const NotificationsList({super.key, this.initialCategory});
-  final String? initialCategory;
+  const NotificationsList({super.key});
 
   @override
   State<NotificationsList> createState() => _NotificationsListState();
@@ -98,9 +97,6 @@ class _NotificationsListState extends State<NotificationsList> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final c = context.read<NotificationsController>();
       final parent = context.read<ParentController>();
-      if (widget.initialCategory != null) {
-        c.setCategoryFilter(widget.initialCategory!);
-      }
       if (c.studentFilter == null && !c.showAllChildren && parent.selectedChild != null) {
         c.setStudentFilter(parent.selectedChild!.student.publicId);
       } else {
@@ -302,6 +298,16 @@ class _NotificationTile extends StatelessWidget {
   const _NotificationTile({required this.item});
   final AppNotification item;
 
+  static IconData _icon(String type) => switch (type) {
+        'EMERGENCY_ALERT' => Icons.warning_amber_rounded,
+        'BUS_STARTED' || 'BUS_STARTED_RETURN' => Icons.directions_bus,
+        'BUS_NEAR_STOP' || 'BUS_ARRIVED_STOP' || 'BUS_NEAR_HOME' => Icons.near_me,
+        'STUDENT_BOARDED' || 'STUDENT_DROPPED' || 'STUDENT_REACHED_SCHOOL' || 'SCHOOL_DISPERSAL' => Icons.child_care,
+        'TRIP_CANCELLED' || 'BUS_DELAYED' => Icons.schedule,
+        'LEAVE_RECORDED' || 'LEAVE_APPROVED' || 'LEAVE_REJECTED' => Icons.event_busy,
+        _ => Icons.notifications_outlined,
+      };
+
   bool get _isAnnouncement {
     final t = item.type.toUpperCase();
     final title = item.title.toLowerCase();
@@ -315,8 +321,6 @@ class _NotificationTile extends StatelessWidget {
         title.contains('broadcast') ||
         msg.contains('broadcast');
   }
-
-  bool get _isEmergency => item.type == 'EMERGENCY_ALERT';
 
   String get _cleanTitle {
     final title = item.title;
@@ -341,191 +345,107 @@ class _NotificationTile extends StatelessWidget {
     return '${(diff.inDays / 30).floor()}mo ago';
   }
 
-  Color get _badgeBg {
-    if (_isEmergency) return const Color(0xFFFEE2E2);
-    if (_isAnnouncement) return const Color(0xFFFEF3C7);
-    if (item.type.contains('BUS') || item.type.contains('TRIP')) return const Color(0xFFEFF6FF);
-    return const Color(0xFFF3F4F6);
-  }
-
-  Color get _badgeFg {
-    if (_isEmergency) return const Color(0xFFDC2626);
-    if (_isAnnouncement) return const Color(0xFFD97706);
-    if (item.type.contains('BUS') || item.type.contains('TRIP')) return const Color(0xFF2563EB);
-    return const Color(0xFF4B5563);
-  }
-
-  IconData get _typeIcon {
-    if (_isEmergency) return Icons.warning_amber_rounded;
-    if (_isAnnouncement) return Icons.campaign_rounded;
-    if (item.type == 'BUS_STARTED' || item.type == 'BUS_STARTED_RETURN') return Icons.directions_bus_rounded;
-    if (item.type == 'BUS_NEAR_STOP' || item.type == 'BUS_ARRIVED_STOP' || item.type == 'BUS_NEAR_HOME') {
-      return Icons.near_me_rounded;
-    }
-    if (item.type == 'STUDENT_BOARDED' || item.type == 'STUDENT_DROPPED' || item.type == 'STUDENT_REACHED_SCHOOL') {
-      return Icons.child_care_rounded;
-    }
-    if (item.type == 'TRIP_CANCELLED' || item.type == 'BUS_DELAYED') return Icons.schedule_rounded;
-    if (item.type.contains('LEAVE')) return Icons.event_busy_rounded;
-    return Icons.notifications_rounded;
-  }
-
-  String get _categoryLabel {
-    if (_isEmergency) return 'EMERGENCY';
-    if (_isAnnouncement) return 'ANNOUNCEMENT';
-    if (item.type == 'BUS_DELAYED') return 'DELAY';
-    if (item.type.contains('BUS') || item.type.contains('TRIP')) return 'TRIP ALERT';
-    if (item.type.contains('STUDENT')) return 'STUDENT';
-    return 'NOTIFICATION';
-  }
-
-  void _onTap(BuildContext context) {
-    final c = context.read<NotificationsController>();
-    c.markRead(item);
-
-    final hasTrip = item.data.containsKey('trip_id') && item.data['trip_id']!.isNotEmpty;
-    final hasStudent = item.data.containsKey('student_id') && item.data['student_id']!.isNotEmpty;
-
-    // Announcements and broadcast notices should open the detailed modal sheet cleanly
-    // instead of triggering a destructive route pop and animation clash.
-    if (!_isAnnouncement && (hasTrip || hasStudent)) {
-      context.read<AppServices>().deepLinks.open({...item.data, 'type': item.type});
-    } else {
-      _showDetailSheet(context);
-    }
-  }
-
-  void _showDetailSheet(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => _NotificationDetailSheet(
-        item: item,
-        cleanTitle: _cleanTitle,
-        categoryLabel: _categoryLabel,
-        isAnnouncement: _isAnnouncement,
-        badgeBg: _badgeBg,
-        badgeFg: _badgeFg,
-        icon: _typeIcon,
-      ),
-    );
+  String _formatFullDateTime(DateTime? date) {
+    if (date == null) return '';
+    return DateFormat('MMM d, yyyy, h:mm a').format(date);
   }
 
   @override
   Widget build(BuildContext context) {
     final unread = !item.isRead;
-    final timeStr = _formatTimeAgo(item.createdAt);
-    final schoolOrAudience = [
-      if (item.schoolName != null && item.schoolName!.isNotEmpty) item.schoolName!,
-      if (item.data['context'] != null && item.data['context']!.isNotEmpty) item.data['context']!,
-    ].join(' · ');
+    final emergency = item.type == 'EMERGENCY_ALERT';
+    final accent = emergency ? AppColors.red : AppColors.brand;
+    final isAnn = _isAnnouncement;
 
     return Container(
       decoration: BoxDecoration(
-        color: unread ? const Color(0xFFFAFCFF) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: unread ? AppColors.brand.withValues(alpha: 0.35) : const Color(0xFFE5E7EB),
-          width: unread ? 1.2 : 1.0,
-        ),
+        color: unread ? Color.alphaBlend(accent.withValues(alpha: 0.05), Colors.white) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: unread ? accent.withValues(alpha: 0.30) : AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: unread ? AppColors.brand.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Material(
         type: MaterialType.transparency,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: () => _onTap(context),
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            final c = context.read<NotificationsController>();
+            c.markRead(item);
+            final hasTarget = item.data.containsKey('trip_id') || item.data.containsKey('student_id');
+            if (hasTarget) context.read<AppServices>().deepLinks.open({...item.data, 'type': item.type});
+          },
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Header: Leading icon, category pill, school/audience, relative time, close button
+                // Top Row: Category, School, Student badges, edited tag & close button
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: _badgeBg,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(_typeIcon, size: 20, color: _badgeFg),
-                    ),
-                    const SizedBox(width: 10),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _badgeBg,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  _categoryLabel,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.4,
-                                    color: _badgeFg,
-                                  ),
-                                ),
-                              ),
-                              if (timeStr.isNotEmpty) ...[
-                                const SizedBox(width: 6),
-                                Text('•', style: TextStyle(fontSize: 10, color: AppColors.slate.withValues(alpha: 0.6))),
-                                const SizedBox(width: 6),
-                                Text(
-                                  timeStr,
-                                  style: const TextStyle(fontSize: 11, color: AppColors.slate, fontWeight: FontWeight.w500),
-                                ),
-                              ],
-                            ],
-                          ),
-                          if (schoolOrAudience.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Text(
-                                schoolOrAudience,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 11.5, color: AppColors.slate, fontWeight: FontWeight.w500),
+                          if (isAnn)
+                            const _MetaBadge(label: 'Announcement', icon: Icons.campaign_rounded, color: AppColors.amber)
+                          else
+                            const _MetaBadge(label: 'Alert', icon: Icons.notifications_active_rounded, color: AppColors.brand),
+                          if (item.schoolName != null && item.schoolName!.isNotEmpty)
+                            _MetaBadge(label: item.schoolName!, icon: Icons.school_rounded, color: AppColors.brandDeep),
+                          if (item.studentName != null && item.studentName!.isNotEmpty)
+                            _MetaBadge(label: item.studentName!, icon: Icons.person_rounded, color: AppColors.green),
+                          if (item.data['context'] != null && item.data['context']!.isNotEmpty)
+                            _MetaBadge(label: item.data['context']!, icon: Icons.groups_rounded, color: AppColors.slate),
+
+                          // Edited indicator
+                          if (item.isEdited)
+                            const Text(
+                              '(edited)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                                color: AppColors.slate,
                               ),
                             ),
                         ],
                       ),
                     ),
-                    // Unread blue dot indicator (Apple iOS style)
+
                     if (unread)
                       Container(
                         margin: const EdgeInsets.only(right: 6),
-                        width: 9,
-                        height: 9,
-                        decoration: const BoxDecoration(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
                           color: AppColors.brand,
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Text(
+                          'New',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
+
                     // Delete button
                     InkWell(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(24),
                       onTap: () async {
                         final ok = await confirmDialog(
                           context,
-                          title: 'Delete notification?',
+                          title: 'Delete this notification?',
                           message: item.title,
                           confirm: 'Delete',
                           destructive: true,
@@ -534,83 +454,81 @@ class _NotificationTile extends StatelessWidget {
                         final err = await context.read<NotificationsController>().delete(item);
                         if (err != null && context.mounted) showSnack(context, err, error: true);
                       },
-                      child: const Padding(
-                        padding: EdgeInsets.all(4),
-                        child: Icon(Icons.close_rounded, size: 18, color: AppColors.slate),
+                      child: const SizedBox(
+                        width: SrSize.touch,
+                        height: SrSize.touch,
+                        child: Tooltip(
+                          message: 'Delete notification',
+                          child: Icon(Icons.close, size: 20, color: AppColors.slate),
+                        ),
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
 
-                // 2. Title line with optional (edited)
+                // Title Row with Icon
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Icon(_icon(item.type), size: 18, color: unread ? accent : AppColors.slate),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _cleanTitle,
                         style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: unread ? FontWeight.w800 : FontWeight.w600,
+                          fontSize: 14,
+                          fontWeight: unread ? FontWeight.w700 : FontWeight.w600,
                           color: AppColors.ink,
-                          letterSpacing: -0.2,
                         ),
                       ),
                     ),
-                    if (item.isEdited)
-                      const Text(
-                        ' (edited)',
-                        style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: AppColors.slate),
-                      ),
                   ],
                 ),
 
-                const SizedBox(height: 5),
+                const SizedBox(height: 6),
 
-                // 3. Message Body
-                Text(
-                  item.message,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    color: Color(0xFF374151),
-                    height: 1.4,
+                // Message Body
+                Padding(
+                  padding: const EdgeInsets.only(left: 26),
+                  child: Text(
+                    item.message,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.ink,
+                      height: 1.35,
+                    ),
                   ),
                 ),
 
-                // 4. Footer pills (Student context, action hint)
-                if (item.studentName != null && item.studentName!.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Row(
+                const SizedBox(height: 10),
+
+                // Footer: Time and relative time
+                Padding(
+                  padding: const EdgeInsets.only(left: 26),
+                  child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.person_rounded, size: 13, color: AppColors.slate),
-                            const SizedBox(width: 4),
-                            Text(
-                              item.studentName!,
-                              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.ink),
-                            ),
-                          ],
+                      const Icon(Icons.access_time, size: 14, color: AppColors.slate),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatFullDateTime(item.createdAt),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.slate,
                         ),
                       ),
-                      const Spacer(),
-                      const Text(
-                        'View details ›',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.brand),
-                      ),
+                      if (item.createdAt != null) ...[
+                        const Text('  ·  ', style: TextStyle(fontSize: 12, color: AppColors.slate)),
+                        Text(
+                          _formatTimeAgo(item.createdAt),
+                          style: const TextStyle(fontSize: 12, color: AppColors.slate),
+                        ),
+                      ],
                     ],
                   ),
-                ],
+                ),
               ],
             ),
           ),
@@ -620,172 +538,34 @@ class _NotificationTile extends StatelessWidget {
   }
 }
 
-/// Apple iOS-inspired modal bottom sheet displaying full notification / announcement content comfortably.
-class _NotificationDetailSheet extends StatelessWidget {
-  const _NotificationDetailSheet({
-    required this.item,
-    required this.cleanTitle,
-    required this.categoryLabel,
-    required this.isAnnouncement,
-    required this.badgeBg,
-    required this.badgeFg,
-    required this.icon,
-  });
-
-  final AppNotification item;
-  final String cleanTitle;
-  final String categoryLabel;
-  final bool isAnnouncement;
-  final Color badgeBg;
-  final Color badgeFg;
+/// Small tinted label used for notification context (type, school, student).
+/// Icon + text, so meaning never depends on colour alone.
+class _MetaBadge extends StatelessWidget {
+  const _MetaBadge({required this.label, required this.icon, required this.color});
+  final String label;
   final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = item.createdAt != null
-        ? DateFormat('MMMM d, yyyy · h:mm a').format(item.createdAt!)
-        : '';
-    final hasTrip = item.data.containsKey('trip_id') && item.data['trip_id']!.isNotEmpty;
-    final hasStudent = item.data.containsKey('student_id') && item.data['student_id']!.isNotEmpty;
-
+    final fg = AppColors.onTint(color);
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      constraints: const BoxConstraints(maxWidth: 220),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(SrRadius.chip),
       ),
-      padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom + 20),
-      child: Column(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFFD1D5DB),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, size: 24, color: badgeFg),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                      decoration: BoxDecoration(
-                        color: badgeBg,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        categoryLabel,
-                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: badgeFg, letterSpacing: 0.4),
-                      ),
-                    ),
-                    if (dateStr.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 3),
-                        child: Text(
-                          dateStr,
-                          style: const TextStyle(fontSize: 12, color: AppColors.slate),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            cleanTitle,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.ink, letterSpacing: -0.3),
-          ),
-          if (item.schoolName != null || item.data['context'] != null) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if (item.schoolName != null) ...[
-                  const Icon(Icons.school_rounded, size: 15, color: AppColors.slate),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      item.schoolName!,
-                      style: const TextStyle(fontSize: 12.5, color: AppColors.slate, fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                if (item.data['context'] != null && item.data['context']!.isNotEmpty) ...[
-                  const Icon(Icons.groups_rounded, size: 15, color: AppColors.slate),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      item.data['context']!,
-                      style: const TextStyle(fontSize: 12.5, color: AppColors.slate, fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-          const SizedBox(height: 14),
-          const Divider(height: 1, color: Color(0xFFE5E7EB)),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9FAFB),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFF3F4F6)),
-            ),
-            child: Text(
-              item.message,
-              style: const TextStyle(fontSize: 14.5, height: 1.5, color: Color(0xFF1F2937)),
-            ),
-          ),
-          if (hasTrip || hasStudent) ...[
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                backgroundColor: AppColors.brand,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-                context.read<AppServices>().deepLinks.open({...item.data, 'type': item.type});
-              },
-              icon: Icon(hasTrip ? Icons.directions_bus_rounded : Icons.person_rounded),
-              label: Text(hasTrip ? 'View Live Bus & Route' : 'View Student Details'),
-            ),
-          ],
-          const SizedBox(height: 12),
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(46),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+          Icon(icon, size: 14, color: fg),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg)),
           ),
         ],
       ),
     );
   }
 }
-

@@ -11,6 +11,7 @@ import 'providers/notifications_controller.dart';
 import 'providers/operator_trip_controller.dart';
 import 'providers/parent_controller.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/welcome_screen.dart';
 import 'screens/home/operator_home_screen.dart';
 import 'screens/home/parent_home_screen.dart';
 import 'theme/saferoute_theme.dart';
@@ -42,7 +43,7 @@ class SafeRouteApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'SafeRoute',
+        title: 'Ethiyo',
         debugShowCheckedModeBanner: false,
         navigatorKey: services.navigatorKey,
         scaffoldMessengerKey: services.messengerKey,
@@ -72,6 +73,32 @@ class SafeRouteApp extends StatelessWidget {
   }
 }
 
+/// Welcome screen first, then sign-in. The welcome screen is shown once per
+/// app launch (it's presentation only; auth lives on the login screen).
+class _SignedOutFlow extends StatefulWidget {
+  const _SignedOutFlow();
+
+  static bool _welcomed = false;
+
+  @override
+  State<_SignedOutFlow> createState() => _SignedOutFlowState();
+}
+
+class _SignedOutFlowState extends State<_SignedOutFlow> {
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: SrMotion.of(context, SrMotion.slow),
+      child: _SignedOutFlow._welcomed
+          ? const LoginScreen(key: ValueKey('login'))
+          : WelcomeScreen(
+              key: const ValueKey('welcome'),
+              onContinue: () => setState(() => _SignedOutFlow._welcomed = true),
+            ),
+    );
+  }
+}
+
 /// Picks the home screen for the signed-in role.
 class _RoleGate extends StatelessWidget {
   const _RoleGate();
@@ -81,16 +108,16 @@ class _RoleGate extends StatelessWidget {
     final auth = context.watch<AuthController>();
     switch (auth.status) {
       case AuthStatus.loading:
-        return const Scaffold(body: LoadingView(label: 'Starting SafeRoute…', branded: true));
+        return const Scaffold(body: LoadingView(label: 'Starting Ethiyo…', branded: true));
       case AuthStatus.unreachable:
         return Scaffold(
           body: ErrorView(
-            message: 'Can\'t reach the SafeRoute server.\n${auth.message ?? ''}',
+            message: 'Can\'t reach the Ethiyo server.\n${auth.message ?? ''}',
             onRetry: auth.bootstrap,
           ),
         );
       case AuthStatus.signedOut:
-        return const LoginScreen();
+        return const _SignedOutFlow();
       case AuthStatus.signedIn:
         final user = auth.user!;
         return switch (user.role) {
@@ -116,7 +143,7 @@ class _UnsupportedRole extends StatelessWidget {
             EmptyView(
               icon: Icons.desktop_windows_outlined,
               title: '${UserRole.label(auth.user?.role ?? '')} accounts use the web dashboard',
-              message: 'The SafeRoute mobile app is for drivers, helpers and parents.',
+              message: 'The Ethiyo mobile app is for drivers, helpers and parents.',
             ),
             FilledButton(onPressed: auth.logout, child: const Text('Sign out')),
           ],
@@ -164,64 +191,21 @@ class _PushBridgeState extends State<_PushBridge> {
     context.read<NotificationsController>().refreshUnread();
     context.read<NotificationsController>().load();
     final data = m.data;
+    final canOpen = data.containsKey('trip_id') || data.containsKey('student_id');
     _s.messengerKey.currentState
       ?..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 5),
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        backgroundColor: AppColors.ink,
-        content: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            _s.messengerKey.currentState?.hideCurrentSnackBar();
-            _s.deepLinks.open(data);
-          },
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.brand.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      m.title,
-                      style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 14),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (m.body.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          m.body,
-                          style: const TextStyle(color: Color(0xFFD1D5DB), fontSize: 13),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        duration: const Duration(seconds: 6),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(m.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+            if (m.body.isNotEmpty) Text(m.body),
+          ],
         ),
-        action: SnackBarAction(
-          label: 'Open',
-          textColor: const Color(0xFF93C5FD),
-          onPressed: () => _s.deepLinks.open(data),
-        ),
+        action: canOpen ? SnackBarAction(label: 'Open', onPressed: () => _s.deepLinks.open(data)) : null,
       ));
     if (data.containsKey('trip_id')) _s.deepLinks.operatorRefresh.value++;
   }

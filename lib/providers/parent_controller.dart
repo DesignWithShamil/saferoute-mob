@@ -138,21 +138,11 @@ class ParentController extends ChangeNotifier {
   /// Reference-counted so the home tab and an open live screen share one timer.
   void startPolling() {
     _pollUsers++;
-    if (_poll == null || !_poll!.isActive) {
-      _poll = Timer.periodic(const Duration(seconds: 4), (_) {
-        if (_pollUsers > 0) {
-          refreshLive();
-        }
-      });
-    }
+    // Polling removed in favour of Pusher real-time events.
   }
 
   void stopPolling() {
     if (_pollUsers > 0) _pollUsers--;
-    if (_pollUsers == 0) {
-      _poll?.cancel();
-      _poll = null;
-    }
   }
 
   void _onPusherEvent(Map<String, dynamic> data) {

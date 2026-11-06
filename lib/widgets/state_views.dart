@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/sr_tokens.dart';
+import 'ethiyo_brand.dart';
 
 class LoadingView extends StatelessWidget {
   const LoadingView({super.key, this.label, this.branded = false, this.skeleton = false});
@@ -18,20 +19,7 @@ class LoadingView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.brand, AppColors.brandDeep],
-                ),
-                borderRadius: BorderRadius.circular(26),
-                boxShadow: [BoxShadow(color: AppColors.brand.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 10))],
-              ),
-              child: const Icon(Icons.directions_bus_rounded, size: 44, color: Colors.white),
-            ),
+            const EthiyoLogo(width: 200),
             const SizedBox(height: 20),
             const SizedBox(
               width: 28,
@@ -175,34 +163,38 @@ class AppColors {
   AppColors._();
 
   /// Primary action colour (royal blue).
-  static const brand = Color(0xFF2563EB);
+  static const brand = Color(0xFF1585E8);
 
   /// Brand navy: headers, hero cards, selected-state text on tints.
-  static const brandDeep = Color(0xFF163A70);
+  static const brandDeep = Color(0xFF0B2A5B);
 
   /// Secondary accent (teal).
-  static const teal = Color(0xFF0F9D8A);
+  static const teal = Color(0xFF12A594);
+
+  /// School-bus yellow from the Ethiyo logo: highlights and call-outs.
+  static const sun = Color(0xFFFFB400);
+  static const sunTint = Color(0xFFFFF4D6);
 
   /// Primary text (dark navy).
-  static const ink = Color(0xFF172B4D);
+  static const ink = Color(0xFF0A1F44);
 
   /// App background.
-  static const bg = Color(0xFFF5F7FB);
+  static const bg = Color(0xFFF2F6FD);
 
   /// Hairlines and card borders.
-  static const border = Color(0xFFE2E8F0);
+  static const border = Color(0xFFDDE6F3);
 
   /// Secondary text. Slightly darker than slate-500 so it keeps 4.5:1
   /// contrast on [bg] as well as on white.
-  static const slate = Color(0xFF59687F);
+  static const slate = Color(0xFF55667F);
 
-  static const green = Color(0xFF16A34A);
+  static const green = Color(0xFF1FA463);
   static const amber = Color(0xFFF59E0B);
   static const red = Color(0xFFDC2626);
   static const info = Color(0xFF0284C7);
 
   /// Light brand tint for selected chips, icon tiles and highlights.
-  static const brandTint = Color(0xFFE8EEFC);
+  static const brandTint = Color(0xFFE4F1FD);
 
   /// Brand hero gradient for the few featured cards (welcome, profile).
   static const heroGradient = LinearGradient(

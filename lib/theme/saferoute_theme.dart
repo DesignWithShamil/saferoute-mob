@@ -5,8 +5,9 @@ import 'package:flutter/services.dart';
 import '../widgets/state_views.dart';
 import 'sr_tokens.dart';
 
-/// SafeRoute visual language: navy + royal blue brand with a teal accent,
-/// calm neutral surfaces, softly rounded cards and generous touch targets.
+/// Ethiyo visual language: sky-azure and deep-navy brand with school-bus
+/// yellow highlights, airy surfaces, pill buttons and borderless soft-shadow
+/// cards, all taken from the Ethiyo logo and scene illustration.
 /// Spacing/radius/motion tokens are in `sr_tokens.dart`, colours in `AppColors`.
 class SafeRouteTheme {
   SafeRouteTheme._();
@@ -82,9 +83,9 @@ class SafeRouteTheme {
         systemOverlayStyle: SystemUiOverlayStyle.dark,
         titleSpacing: 4,
         titleTextStyle: TextStyle(
-          fontSize: 20,
+          fontSize: 22,
           fontWeight: FontWeight.w800,
-          letterSpacing: -0.5,
+          letterSpacing: -0.6,
           color: _ink,
         ),
         iconTheme: IconThemeData(color: _ink),
@@ -94,7 +95,7 @@ class SafeRouteTheme {
         elevation: 0,
         height: 68,
         backgroundColor: AppColors.brandDeep,
-        indicatorColor: Colors.white.withValues(alpha: 0.14),
+        indicatorColor: AppColors.sun.withValues(alpha: 0.28),
         iconTheme: WidgetStateProperty.resolveWith((states) =>
             IconThemeData(color: states.contains(WidgetState.selected) ? Colors.white : Colors.white70)),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
@@ -107,14 +108,14 @@ class SafeRouteTheme {
         }),
       ),
       cardTheme: CardThemeData(
-        elevation: 0,
         margin: EdgeInsets.zero,
         color: Colors.white,
         surfaceTintColor: Colors.transparent,
-        shadowColor: _ink.withValues(alpha: 0.08),
+        // Borderless cards lifted by a soft, brand-tinted shadow.
+        elevation: 3,
+        shadowColor: AppColors.brandDeep.withValues(alpha: 0.12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(SrRadius.card),
-          side: const BorderSide(color: _border),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
@@ -140,7 +141,7 @@ class SafeRouteTheme {
           minimumSize: const Size(64, SrSize.buttonHeight - 2),
           foregroundColor: AppColors.brand,
           backgroundColor: Colors.white,
-          side: BorderSide(color: AppColors.brand.withValues(alpha: 0.35), width: 1.2),
+          side: BorderSide(color: AppColors.brand.withValues(alpha: 0.40), width: 1.4),
           shape: rr(SrRadius.button),
           textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
@@ -161,6 +162,7 @@ class SafeRouteTheme {
         errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(SrRadius.input), borderSide: const BorderSide(color: AppColors.red)),
         focusedErrorBorder:
             OutlineInputBorder(borderRadius: BorderRadius.circular(SrRadius.input), borderSide: const BorderSide(color: AppColors.red, width: 1.8)),
+        prefixIconColor: AppColors.brand,
         labelStyle: const TextStyle(fontWeight: FontWeight.w500, color: AppColors.slate),
         hintStyle: const TextStyle(color: Color(0xFF8795AB)),
       ),
@@ -233,8 +235,8 @@ class SafeRouteTheme {
         dividerColor: _border,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.brand,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.sun,
+        foregroundColor: AppColors.brandDeep,
         elevation: 4,
         shape: rr(20),
       ),

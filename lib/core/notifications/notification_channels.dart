@@ -16,11 +16,8 @@ class NotificationChannels {
     await android.createNotificationChannel(const AndroidNotificationChannel(
       alertsId,
       'Trip & student alerts',
-      description: 'Trip started, bus approaching, pickup/drop, announcements and emergency alerts.',
-      importance: Importance.max,
-      playSound: true,
-      enableVibration: true,
-      showBadge: true,
+      description: 'Trip started, bus approaching, pickup/drop and emergency alerts.',
+      importance: Importance.high,
     ));
     await android.createNotificationChannel(const AndroidNotificationChannel(
       trackingId,

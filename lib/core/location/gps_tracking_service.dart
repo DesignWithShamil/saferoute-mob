@@ -79,7 +79,7 @@ class GpsTrackingService {
         autoStartOnBoot: false,
         isForegroundMode: true,
         notificationChannelId: NotificationChannels.trackingId,
-        initialNotificationTitle: 'SafeRoute trip in progress',
+        initialNotificationTitle: 'Ethiyo trip in progress',
         initialNotificationContent: 'Sharing live bus location',
         foregroundServiceNotificationId: NotificationChannels.trackingNotificationId,
         foregroundServiceTypes: [AndroidForegroundType.location],
@@ -334,7 +334,7 @@ class _TripGpsReporter {
       GpsState.gpsOff => 'GPS is off – turn on location',
       _ => 'Sharing live bus location · $time',
     };
-    s.setForegroundNotificationInfo(title: 'SafeRoute trip in progress', content: content);
+    s.setForegroundNotificationInfo(title: 'Ethiyo trip in progress', content: content);
   }
 
   Future<void> _shutdown({required String? reason, String? message}) async {

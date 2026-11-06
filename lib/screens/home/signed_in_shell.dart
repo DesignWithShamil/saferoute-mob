@@ -98,8 +98,6 @@ class _SignedInShellState extends State<SignedInShell> with SingleTickerProvider
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       context.read<NotificationsController>().refreshUnread();
-      context.read<NotificationsController>().load();
-      context.read<AppServices>().notificationService.ensureRegistered();
     }
   }
 
@@ -194,7 +192,7 @@ class _SignedInShellState extends State<SignedInShell> with SingleTickerProvider
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      useSafeArea: false,
+      useSafeArea: true,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
       barrierColor: AppColors.ink.withValues(alpha: 0.45),
@@ -344,9 +342,8 @@ class _DockBar extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(31),
-                        border: Border.all(color: AppColors.border),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 18, offset: const Offset(0, 6)),
+                          BoxShadow(color: AppColors.brandDeep.withValues(alpha: 0.18), blurRadius: 26, offset: const Offset(0, 10)),
                         ],
                       ),
                     ),
@@ -362,8 +359,8 @@ class _DockBar extends StatelessWidget {
                     child: IgnorePointer(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: AppColors.brand.withValues(alpha: 0.10),
-                          borderRadius: BorderRadius.circular(22),
+                          gradient: AppColors.heroGradient,
+                          borderRadius: BorderRadius.circular(24),
                         ),
                       ),
                     ),
@@ -432,7 +429,7 @@ class _Orb extends StatelessWidget {
       child: Icon(
         open ? Icons.close_rounded : Icons.apps_rounded,
         key: ValueKey(open),
-        color: Colors.white,
+        color: AppColors.brandDeep,
         size: 26,
       ),
     );
@@ -450,9 +447,9 @@ class _Orb extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [AppColors.brand, AppColors.brandDeep],
+              colors: [Color(0xFFFFD25A), AppColors.sun],
             ),
-            boxShadow: [BoxShadow(color: AppColors.brand.withValues(alpha: 0.28), blurRadius: 10, offset: const Offset(0, 4))],
+            boxShadow: [BoxShadow(color: AppColors.sun.withValues(alpha: 0.45), blurRadius: 14, offset: const Offset(0, 5))],
           ),
           child: Material(
             type: MaterialType.transparency,
@@ -477,7 +474,7 @@ class _DockItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.brand : AppColors.slate.withValues(alpha: 0.85);
+    final color = selected ? Colors.white : AppColors.slate;
     Widget icon = AnimatedScale(
       scale: selected ? 1.12 : 1,
       duration: const Duration(milliseconds: 260),
@@ -548,22 +545,19 @@ class _MoreSheet extends StatelessWidget {
     }
     final initial = (user?.fullName.isNotEmpty == true) ? user!.fullName.characters.first.toUpperCase() : '?';
 
-    return SafeArea(
-      top: false,
-      child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.bg,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          boxShadow: [
-            BoxShadow(color: Colors.black12, blurRadius: 24, offset: Offset(0, -6)),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Container(
+      margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 30, offset: const Offset(0, 10))],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Profile header
               Container(
@@ -602,7 +596,7 @@ class _MoreSheet extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                user?.fullName ?? 'SafeRoute',
+                                user?.fullName ?? 'Ethiyo',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3),
@@ -705,8 +699,7 @@ class _MoreSheet extends StatelessWidget {
           ),
         ),
       ),
-    ),
-  );
+    );
   }
 }
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../theme/sr_tokens.dart';
+import 'ethiyo_brand.dart';
 import 'state_views.dart';
 
 /// Fade + slide-up entrance. Purely visual; plays once when first built.
@@ -75,16 +76,16 @@ class SrGradients {
   static const button = LinearGradient(colors: [AppColors.brand, AppColors.brandDeep]);
 }
 
-class _WaveClipper extends CustomClipper<Path> {
+/// Clips the hero so the white sheet below bulges up in the centre.
+class _SheetClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final w = size.width;
     final h = size.height;
     return Path()
-      ..lineTo(0, h - 30)
-      ..quadraticBezierTo(w * 0.25, h + 12, w * 0.55, h - 22)
-      ..quadraticBezierTo(w * 0.82, h - 50, w, h - 20)
       ..lineTo(w, 0)
+      ..lineTo(w, h)
+      ..quadraticBezierTo(w / 2, h - 60, 0, h)
       ..close();
   }
 
@@ -92,7 +93,7 @@ class _WaveClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
-/// Soft background used by the sign-in / registration pages.
+/// Page background for the auth screens: clean white that fades to a faint sky.
 class SrAuthBackground extends StatelessWidget {
   const SrAuthBackground({super.key, required this.child});
   final Widget child;
@@ -103,14 +104,17 @@ class SrAuthBackground extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFE9F6F4), AppColors.brandTint, AppColors.bg],
+            colors: [Colors.white, Colors.white, AppColors.brandTint],
+            stops: [0.0, 0.7, 1.0],
           ),
         ),
         child: child,
       );
 }
 
-/// Gradient hero with floating bus, decorative rings and a tagline.
+/// Photographic header for sign-in / registration / reset pages: the Ethiyo
+/// scene with a curved sheet edge. [showLogo] adds the logo card (sign-in);
+/// otherwise [title] and [subtitle] sit over the scene (inner auth pages).
 class SrAuthHero extends StatelessWidget {
   const SrAuthHero({
     super.key,
@@ -120,149 +124,134 @@ class SrAuthHero extends StatelessWidget {
     this.compact = false,
     this.showFeatures = true,
     this.onBack,
+    this.showLogo = false,
   });
 
   final String title;
   final String subtitle;
+
+  /// Kept for API compatibility; the scene replaces the icon tile.
   final IconData icon;
   final bool compact;
   final bool showFeatures;
   final VoidCallback? onBack;
+  final bool showLogo;
 
   @override
   Widget build(BuildContext context) {
-    final top = MediaQuery.of(context).padding.top;
+    final top = MediaQuery.paddingOf(context).top;
+    final minHeight = (showLogo ? 350.0 : (compact ? 220.0 : 300.0)) + top;
     return ClipPath(
-      clipper: _WaveClipper(),
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.fromLTRB(24, top + (compact ? 14 : 28), 24, compact ? 52 : 62),
-        decoration: const BoxDecoration(gradient: SrGradients.hero),
-        child: Stack(
-          alignment: Alignment.topCenter,
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(right: -90, top: -70, child: _ring(190, 0.07)),
-            Positioned(left: -80, bottom: -20, child: _ring(140, 0.06)),
-            SizedBox(
-              width: double.infinity,
-              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                if (onBack != null)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: InkResponse(
-                      onTap: onBack,
-                      radius: 26,
-                      child: Container(
-                        width: SrSize.touch,
-                        height: SrSize.touch,
-                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(14)),
-                        child: const Tooltip(message: 'Back', child: Icon(Icons.arrow_back_rounded, color: Colors.white)),
-                      ),
-                    ),
-                  ),
-                SizedBox(height: onBack != null ? 6 : 0),
-                ExcludeSemantics(
-                  child: SrFloating(
-                  child: Container(
-                    width: compact ? 70 : 88,
-                    height: compact ? 70 : 88,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(compact ? 22 : 28),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 24, offset: const Offset(0, 12))],
-                    ),
-                    child: Icon(icon, size: compact ? 38 : 48, color: Colors.white),
-                  ),
-                  ),
+      clipper: _SheetClipper(),
+      child: Stack(
+        children: [
+          const Positioned.fill(child: EthiyoHeroImage(alignment: Alignment(0, 0.8))),
+          // Gentle scrim keeps white text legible without hiding the scene.
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.brandDeep.withValues(alpha: showLogo ? 0.30 : 0.55),
+                    AppColors.brandDeep.withValues(alpha: 0.0),
+                    AppColors.brandDeep.withValues(alpha: showLogo ? 0.0 : 0.35),
+                  ],
+                  stops: const [0.0, 0.55, 1.0],
                 ),
-                SizedBox(height: compact ? 14 : 18),
-                SrFadeIn(
-                  delay: const Duration(milliseconds: 60),
-                  child: Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: compact ? 24 : 28,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.8,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                SrFadeIn(
-                  delay: const Duration(milliseconds: 100),
-                  child: Text(
-                    subtitle,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14.5, height: 1.4, color: Colors.white.withValues(alpha: 0.92)),
-                  ),
-                ),
-                if (showFeatures) ...[
-                  const SizedBox(height: 18),
-                  SrFadeIn(
-                    delay: const Duration(milliseconds: 140),
-                    child: Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: const [
-                        _FeaturePill(icon: Icons.my_location_rounded, label: 'Live tracking'),
-                        _FeaturePill(icon: Icons.verified_user_rounded, label: 'Safe pickup'),
-                        _FeaturePill(icon: Icons.notifications_active_rounded, label: 'Instant alerts'),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
+              ),
             ),
+          ),
+          ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minHeight),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(24, top + 14, 24, 56),
+              child: showLogo ? _logoLayout() : _titleLayout(),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  static Widget _ring(double size, double alpha) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: alpha * 2), width: 1.5),
-          color: Colors.white.withValues(alpha: alpha),
-        ),
+  Widget _logoLayout() => Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          const SizedBox(height: 12),
+          SrFadeIn(child: const EthiyoLogoCard()),
+          const SizedBox(height: 14),
+          SrFadeIn(
+            delay: const Duration(milliseconds: 80),
+            child: Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                shadows: [Shadow(color: Color(0x660B2A5B), blurRadius: 8, offset: Offset(0, 2))],
+              ),
+            ),
+          ),
+        ],
+      );
+
+  Widget _titleLayout() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          if (onBack != null)
+            Material(
+              color: Colors.white.withValues(alpha: 0.9),
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: onBack,
+                child: const SizedBox(
+                  width: SrSize.touch,
+                  height: SrSize.touch,
+                  child: Tooltip(message: 'Back', child: Icon(Icons.arrow_back_rounded, color: AppColors.brandDeep)),
+                ),
+              ),
+            )
+          else
+            const SizedBox(height: SrSize.touch),
+          const SizedBox(height: 24),
+          SrFadeIn(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    height: 1.15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.6,
+                    color: Colors.white,
+                    shadows: [Shadow(color: Color(0x660B2A5B), blurRadius: 10, offset: Offset(0, 2))],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    height: 1.4,
+                    color: Colors.white,
+                    shadows: [Shadow(color: Color(0x660B2A5B), blurRadius: 8, offset: Offset(0, 1))],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       );
 }
 
-class _FeaturePill extends StatelessWidget {
-  const _FeaturePill({required this.icon, required this.label});
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 15, color: Colors.white),
-            const SizedBox(width: 5),
-            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white))),
-          ],
-        ),
-      );
-}
-
-/// Elevated white panel used for the auth forms.
+/// Soft floating panel used for the auth forms.
 class SrFormPanel extends StatelessWidget {
   const SrFormPanel({super.key, required this.child});
   final Widget child;
@@ -273,8 +262,7 @@ class SrFormPanel extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(SrRadius.panel),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [BoxShadow(color: AppColors.ink.withValues(alpha: 0.06), blurRadius: 24, offset: const Offset(0, 10))],
+          boxShadow: [BoxShadow(color: AppColors.brandDeep.withValues(alpha: 0.10), blurRadius: 28, offset: const Offset(0, 12))],
         ),
         child: child,
       );
@@ -405,49 +393,72 @@ class _SrClockHeaderState extends State<SrClockHeader> {
     final first = (widget.name ?? '').trim().split(' ').first;
     return SrFadeIn(
       child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+        margin: const EdgeInsets.only(bottom: 16),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(SrRadius.panel),
-          gradient: AppColors.heroGradient,
-          boxShadow: [BoxShadow(color: AppColors.brandDeep.withValues(alpha: 0.22), blurRadius: 18, offset: const Offset(0, 8))],
+          boxShadow: [BoxShadow(color: AppColors.brandDeep.withValues(alpha: 0.24), blurRadius: 22, offset: const Offset(0, 10))],
         ),
-        child: Row(
+        child: Stack(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(14)),
-              child: Icon(icon, color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    first.isEmpty ? greeting : '$greeting, $first',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16, letterSpacing: -0.2),
+            const Positioned.fill(child: EthiyoHeroImage(alignment: Alignment(0, 0.6), cacheWidth: 800)),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      AppColors.brandDeep.withValues(alpha: 0.94),
+                      AppColors.brandDeep.withValues(alpha: 0.62),
+                      AppColors.brandDeep.withValues(alpha: 0.12),
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    DateFormat('EEEE, d MMM y').format(_now),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.88), fontSize: 13),
-                  ),
-                ],
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(14)),
-              child: Text(
-                DateFormat('h:mm a').format(_now),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 14, 18),
+              child: Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(color: AppColors.sun, borderRadius: BorderRadius.circular(16)),
+                    child: Icon(icon, color: AppColors.brandDeep, size: 25),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          first.isEmpty ? greeting : '$greeting, $first',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17, letterSpacing: -0.2, height: 1.2),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          DateFormat('EEEE, d MMM y').format(_now),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.92), fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+                    child: Text(
+                      DateFormat('h:mm a').format(_now),
+                      style: const TextStyle(color: AppColors.brandDeep, fontWeight: FontWeight.w800, fontSize: 14),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

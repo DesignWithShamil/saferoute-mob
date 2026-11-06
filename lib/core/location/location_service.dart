@@ -21,7 +21,7 @@ class LocationService {
       final open = await _explain(
         context,
         title: 'Turn on location',
-        message: 'Your phone\'s location (GPS) is switched off. SafeRoute needs it to share the bus position '
+        message: 'Your phone\'s location (GPS) is switched off. Ethiyo needs it to share the bus position '
             'with parents and the school during this trip.',
         action: 'Open settings',
       );
@@ -33,7 +33,7 @@ class LocationService {
       final open = await _explain(
         context,
         title: 'Location permission needed',
-        message: 'Location permission was denied. Enable it for SafeRoute in app settings so the bus position '
+        message: 'Location permission was denied. Enable it for Ethiyo in app settings so the bus position '
             'can be shared during the trip.',
         action: 'Open app settings',
       );
@@ -44,7 +44,7 @@ class LocationService {
     final proceed = await _explain(
       context,
       title: 'Share bus location',
-      message: 'While a trip is active, SafeRoute uses your phone\'s GPS as the bus location so parents and the '
+      message: 'While a trip is active, Ethiyo uses your phone\'s GPS as the bus location so parents and the '
           'school can follow the bus. Tracking stops automatically when the trip ends. '
           'A notification stays visible while location is being shared.',
       action: 'Continue',

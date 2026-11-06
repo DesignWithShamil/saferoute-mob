@@ -54,10 +54,7 @@ String? approachText(ParentLiveTrip live, LiveStop? stop) {
   final loc = live.location;
   if (loc == null || stop == null || stop.latitude == null || stop.longitude == null) return null;
   if (stop.status == TripStopStatus.departed) return null;
-  var meters = haversineMeters(loc.latitude, loc.longitude, stop.latitude!, stop.longitude!);
-  if (meters > 100000) {
-    meters = 400; // Sensible local default if emulator/mock GPS is out of region
-  }
+  final meters = haversineMeters(loc.latitude, loc.longitude, stop.latitude!, stop.longitude!);
   final eta = etaMinutes(meters, loc.speedKmh);
   return '${formatDistance(meters)} · ~${eta <= 1 ? '1 min' : '$eta min'}';
 }

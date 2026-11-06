@@ -98,14 +98,9 @@ class NotificationService {
     }
     try {
       if (Firebase.apps.isEmpty) await Firebase.initializeApp(options: Env.firebaseOptions);
-      await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
       FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
       FirebaseMessaging.onMessage.listen((m) async {
-        final title = m.notification?.title ?? (m.data['title']?.toString() ?? 'SafeRoute');
+        final title = m.notification?.title ?? (m.data['title']?.toString() ?? 'Ethiyo');
         final body = m.notification?.body ?? (m.data['body']?.toString() ?? m.data['message']?.toString() ?? '');
         final data = _stringify(m.data);
 
@@ -118,34 +113,21 @@ class NotificationService {
           }
         }
 
-        final notifTitle = title.trim().isNotEmpty ? title : 'SafeRoute';
-        final notifBody = body.trim().isNotEmpty ? body : 'New notification';
-        final notifIntId = (DateTime.now().millisecondsSinceEpoch % 100000);
-
         try {
           await _local.show(
-            id: notifIntId,
-            title: notifTitle,
-            body: notifBody,
-            notificationDetails: NotificationDetails(
+            id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            title: title,
+            body: body,
+            notificationDetails: const NotificationDetails(
               android: AndroidNotificationDetails(
                 NotificationChannels.alertsId,
                 'Trip & student alerts',
-                channelDescription: 'Trip started, bus approaching, pickup/drop, announcements and emergency alerts.',
+                channelDescription: 'Trip started, bus approaching, pickup/drop and emergency alerts.',
                 importance: Importance.max,
                 priority: Priority.high,
                 icon: '@mipmap/ic_launcher',
-                playSound: true,
-                enableVibration: true,
-                visibility: NotificationVisibility.public,
-                ticker: notifTitle,
-                styleInformation: BigTextStyleInformation(
-                  notifBody,
-                  contentTitle: notifTitle,
-                  summaryText: data['school_name'] ?? data['type'],
-                ),
               ),
-              iOS: const DarwinNotificationDetails(
+              iOS: DarwinNotificationDetails(
                 presentAlert: true,
                 presentBadge: true,
                 presentSound: true,
@@ -167,18 +149,9 @@ class NotificationService {
       final initial = await FirebaseMessaging.instance.getInitialMessage();
       if (initial != null) _launchTap = _stringify(initial.data);
       _firebaseReady = true;
-
-      // Print FCM token right on app startup so it's visible without waiting for sign-in
-      try {
-        final bootToken = await FirebaseMessaging.instance.getToken();
-        debugPrint('=============================================');
-        debugPrint('🔥 FCM TOKEN (App Startup): $bootToken');
-        debugPrint('=============================================');
-      } catch (tokenErr) {
-        debugPrint('⚠️ FCM getToken on startup error: $tokenErr');
-      }
     } catch (e) {
       debugPrint('Firebase initialisation failed; push disabled: $e');
+
     }
   }
 
@@ -189,26 +162,19 @@ class NotificationService {
     if (!_firebaseReady) {
       await init();
     }
-    if (!_firebaseReady) {
-      debugPrint('⚠️ Firebase is not ready; cannot register FCM token.');
-      return;
-    }
+    if (!_firebaseReady) return;
     try {
       final messaging = FirebaseMessaging.instance;
       final token = await messaging.getToken();
-      debugPrint('=============================================');
-      debugPrint('🔥 FCM TOKEN (Signed In): $token');
-      debugPrint('=============================================');
       if (token != null && token.isNotEmpty) {
         await _register(token);
       }
       await _tokenRefreshSub?.cancel();
       _tokenRefreshSub = messaging.onTokenRefresh.listen((t) {
-        debugPrint('🔄 FCM TOKEN REFRESHED: $t');
         if (t.isNotEmpty) _register(t);
       });
     } catch (e) {
-      debugPrint('❌ FCM token registration failed: $e');
+      debugPrint('FCM token registration failed: $e');
     }
   }
 
@@ -233,31 +199,13 @@ class NotificationService {
     }
   }
 
-  /// Ensures the current device token is registered with the Django backend.
-  Future<void> ensureRegistered() async {
-    if (!_firebaseReady) await init();
-    if (!_firebaseReady) return;
-    try {
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token != null && token.isNotEmpty) {
-        await _register(token);
-      }
-    } catch (e) {
-      debugPrint('ensureRegistered error: $e');
-    }
-  }
-
   Future<void> _register(String token) async {
-    for (var attempt = 1; attempt <= 2; attempt++) {
-      try {
-        await _repository.registerDevice(token, Platform.isIOS ? 'IOS' : 'ANDROID');
-        await _storage.setRegisteredFcmToken(token);
-        debugPrint('✅ Device successfully registered with backend FCM.');
-        return;
-      } catch (e) {
-        debugPrint('⚠️ Backend device registration attempt $attempt failed: $e');
-        if (attempt < 2) await Future.delayed(const Duration(seconds: 2));
-      }
+    try {
+      await _repository.registerDevice(token, Platform.isIOS ? 'IOS' : 'ANDROID');
+      await _storage.setRegisteredFcmToken(token);
+      debugPrint('Device successfully registered with backend FCM.');
+    } catch (e) {
+      debugPrint('Backend device registration failed: $e');
     }
   }
 
@@ -272,16 +220,10 @@ class NotificationService {
         );
       }
       try {
-        final android = _local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-        if (android != null) {
-          final enabled = await android.areNotificationsEnabled();
-          if (enabled != true) {
-            await android.requestNotificationsPermission();
-          }
-        }
-      } catch (e) {
-        debugPrint('Android notification permission check failed: $e');
-      }
+        await _local
+            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            ?.requestNotificationsPermission();
+      } catch (_) {}
     } catch (e) {
       debugPrint('Notification system permission check failed: $e');
     }
@@ -294,7 +236,7 @@ class NotificationService {
         icon: const Icon(Icons.notifications_active_outlined),
         title: const Text('Stay informed'),
         content: const Text(
-          'SafeRoute sends alerts when a trip starts, the bus is approaching, your child is picked up or dropped, '
+          'Ethiyo sends alerts when a trip starts, the bus is approaching, your child is picked up or dropped, '
           'and in emergencies. Drivers also see a notification while live location is being shared.',
         ),
         actions: [
