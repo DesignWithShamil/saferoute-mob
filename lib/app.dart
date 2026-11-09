@@ -5,12 +5,14 @@ import 'package:provider/provider.dart';
 
 import 'app_services.dart';
 import 'core/firebase/notification_service.dart';
+import 'core/storage/token_storage.dart';
 import 'models/user.dart';
 import 'providers/auth_controller.dart';
 import 'providers/notifications_controller.dart';
 import 'providers/operator_trip_controller.dart';
 import 'providers/parent_controller.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/user_tutorial_screen.dart';
 import 'screens/auth/welcome_screen.dart';
 import 'screens/home/operator_home_screen.dart';
 import 'screens/home/parent_home_screen.dart';
@@ -73,8 +75,7 @@ class SafeRouteApp extends StatelessWidget {
   }
 }
 
-/// Welcome screen first, then sign-in. The welcome screen is shown once per
-/// app launch (it's presentation only; auth lives on the login screen).
+/// First-time user tutorial check, then welcome screen, then sign-in.
 class _SignedOutFlow extends StatefulWidget {
   const _SignedOutFlow();
 
@@ -85,8 +86,42 @@ class _SignedOutFlow extends StatefulWidget {
 }
 
 class _SignedOutFlowState extends State<_SignedOutFlow> {
+  bool? _seenTutorial;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkTutorialStatus();
+  }
+
+  Future<void> _checkTutorialStatus() async {
+    final seen = await TokenStorage().tutorialSeen;
+    if (mounted) {
+      setState(() => _seenTutorial = seen);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_seenTutorial == null) {
+      return const Scaffold(
+        backgroundColor: AppColors.brandDeep,
+        body: LoadingView(label: 'Starting SafeRoute…', branded: true),
+      );
+    }
+
+    if (!_seenTutorial!) {
+      return UserTutorialScreen(
+        key: const ValueKey('first_time_tutorial'),
+        onFinished: () async {
+          await TokenStorage().markTutorialSeen();
+          if (mounted) {
+            setState(() => _seenTutorial = true);
+          }
+        },
+      );
+    }
+
     return AnimatedSwitcher(
       duration: SrMotion.of(context, SrMotion.slow),
       child: _SignedOutFlow._welcomed

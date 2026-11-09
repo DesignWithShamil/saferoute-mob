@@ -10,6 +10,7 @@ class TokenStorage {
   static const _fcmTokenKey = 'saferoute_fcm_token';
   static const _notificationPromptKey = 'saferoute_notification_prompted';
   static const _selectedChildKey = 'saferoute_selected_child';
+  static const _tutorialSeenKey = 'saferoute_tutorial_seen';
 
   final FlutterSecureStorage _storage;
 
@@ -37,4 +38,7 @@ class TokenStorage {
 
   Future<bool> get notificationPromptShown async => (await _storage.read(key: _notificationPromptKey)) == '1';
   Future<void> markNotificationPromptShown() => _storage.write(key: _notificationPromptKey, value: '1');
+
+  Future<bool> get tutorialSeen async => (await _storage.read(key: _tutorialSeenKey)) == '1';
+  Future<void> markTutorialSeen() => _storage.write(key: _tutorialSeenKey, value: '1');
 }

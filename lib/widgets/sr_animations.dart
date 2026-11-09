@@ -140,7 +140,7 @@ class SrAuthHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
-    final minHeight = (showLogo ? 350.0 : (compact ? 220.0 : 300.0)) + top;
+    final minHeight = (showLogo ? (subtitle.trim().isEmpty ? 220.0 : 310.0) : (compact ? 220.0 : 300.0)) + top;
     return ClipPath(
       clipper: _SheetClipper(),
       child: Stack(
@@ -176,25 +176,32 @@ class SrAuthHero extends StatelessWidget {
   }
 
   Widget _logoLayout() => Column(
-        mainAxisAlignment: MainAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 12),
-          SrFadeIn(child: const EthiyoLogoCard()),
-          const SizedBox(height: 14),
-          SrFadeIn(
-            delay: const Duration(milliseconds: 80),
-            child: Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                height: 1.35,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                shadows: [Shadow(color: Color(0x660B2A5B), blurRadius: 8, offset: Offset(0, 2))],
-              ),
+          const Center(
+            child: SrFadeIn(
+              child: EthiyoLogo(width: 220),
             ),
           ),
+          if (subtitle.trim().isNotEmpty) ...[
+            const SizedBox(height: 14),
+            SrFadeIn(
+              delay: const Duration(milliseconds: 80),
+              child: Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  height: 1.35,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  shadows: [Shadow(color: Color(0x660B2A5B), blurRadius: 8, offset: Offset(0, 2))],
+                ),
+              ),
+            ),
+          ],
         ],
       );
 

@@ -3,11 +3,12 @@ import 'package:flutter/services.dart';
 
 import '../../widgets/ethiyo_brand.dart';
 import '../../widgets/sr_animations.dart';
+import '../../widgets/sr_transitions.dart';
 import '../../widgets/state_views.dart';
+import 'user_tutorial_screen.dart';
 
-/// First screen for signed-out users: the Ethiyo scene, logo and tagline with
-/// a single round button into sign-in. Purely presentational; authentication
-/// still happens on the login screen.
+/// First screen for signed-out users: the Ethiyo scene and centered logo with
+/// a single round button into sign-in and quick access to the user tutorial.
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key, required this.onContinue});
   final VoidCallback onContinue;
@@ -39,33 +40,57 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                // Top "How to Use" tutorial button
                 Positioned(
-                  top: insets.top + 36,
-                  left: 24,
-                  right: 24,
-                  child: Column(
-                    children: [
-                      SrFadeIn(child: const EthiyoLogoCard(width: 190)),
-                      const SizedBox(height: 18),
-                      SrFadeIn(
-                        delay: const Duration(milliseconds: 100),
-                        child: const Text(
-                          'Safe School Transport\nfor a Brighter Tomorrow',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 22,
-                            height: 1.25,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.4,
-                            color: Colors.white,
-                            shadows: [Shadow(color: Color(0x800B2A5B), blurRadius: 12, offset: Offset(0, 2))],
-                          ),
+                  top: insets.top + 12,
+                  right: 20,
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.black.withValues(alpha: 0.28),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                    ),
+                    icon: const Icon(Icons.help_outline_rounded, size: 18),
+                    label: const Text('How to Use', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    onPressed: () => Navigator.of(context).push(
+                      srFadeRoute(
+                        UserTutorialScreen(
+                          isStandalone: true,
+                          onFinished: () => Navigator.of(context).pop(),
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-                Positioned(left: 0, right: 0, bottom: 0, child: _BottomSheet(bottomInset: insets.bottom, onContinue: onContinue)),
+                // Transparent, centered Ethiyo Logo without any white background card
+                Positioned(
+                  top: insets.top + 56,
+                  left: 24,
+                  right: 24,
+                  child: const Center(
+                    child: SrFadeIn(
+                      child: EthiyoLogo(width: 230),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: _BottomSheet(
+                    bottomInset: insets.bottom,
+                    onContinue: onContinue,
+                    onOpenTutorial: () => Navigator.of(context).push(
+                      srFadeRoute(
+                        UserTutorialScreen(
+                          isStandalone: true,
+                          onFinished: () => Navigator.of(context).pop(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -89,52 +114,86 @@ class _SheetTopClipper extends CustomClipper<Path> {
 }
 
 class _BottomSheet extends StatelessWidget {
-  const _BottomSheet({required this.bottomInset, required this.onContinue});
+  const _BottomSheet({
+    required this.bottomInset,
+    required this.onContinue,
+    required this.onOpenTutorial,
+  });
+
   final double bottomInset;
   final VoidCallback onContinue;
+  final VoidCallback onOpenTutorial;
 
   @override
   Widget build(BuildContext context) => ClipPath(
         clipper: _SheetTopClipper(),
         child: Container(
           color: Colors.white,
-          padding: EdgeInsets.fromLTRB(28, 48, 24, bottomInset + 24),
-          child: Row(
+          padding: EdgeInsets.fromLTRB(28, 44, 24, bottomInset + 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('For parents, drivers & helpers', style: TextStyle(fontSize: 13.5, color: AppColors.slate)),
-                    SizedBox(height: 4),
-                    Text(
-                      'Live tracking · Safe pickup · Instant alerts',
-                      style: TextStyle(fontSize: 16, height: 1.3, fontWeight: FontWeight.w800, color: AppColors.brandDeep),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('For parents, drivers & helpers', style: TextStyle(fontSize: 13.5, color: AppColors.slate)),
+                        SizedBox(height: 4),
+                        Text(
+                          'Live tracking · Safe pickup · Instant alerts',
+                          style: TextStyle(fontSize: 16, height: 1.3, fontWeight: FontWeight.w800, color: AppColors.brandDeep),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 16),
+                  Semantics(
+                    button: true,
+                    label: 'Get started',
+                    excludeSemantics: true,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Ink(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: AppColors.heroGradient,
+                          boxShadow: [BoxShadow(color: AppColors.brand.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))],
+                        ),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: onContinue,
+                          child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 28),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              Semantics(
-                button: true,
-                label: 'Get started',
-                excludeSemantics: true,
-                child: Material(
-                  color: Colors.transparent,
-                  child: Ink(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: AppColors.heroGradient,
-                      boxShadow: [BoxShadow(color: AppColors.brand.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))],
-                    ),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: onContinue,
-                      child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 28),
-                    ),
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: onOpenTutorial,
+                borderRadius: BorderRadius.circular(8),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.menu_book_rounded, size: 16, color: AppColors.brand),
+                      SizedBox(width: 6),
+                      Text(
+                        'New to SafeRoute? View User Guide Tutorial',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.brand,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
