@@ -340,10 +340,14 @@ class _DockBar extends StatelessWidget {
                     height: _bar,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: const Color(0xFF0F172A),
                         borderRadius: BorderRadius.circular(31),
                         boxShadow: [
-                          BoxShadow(color: AppColors.brandDeep.withValues(alpha: 0.18), blurRadius: 26, offset: const Offset(0, 10)),
+                          BoxShadow(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.35),
+                            blurRadius: 28,
+                            offset: const Offset(0, 10),
+                          ),
                         ],
                       ),
                     ),
@@ -359,7 +363,7 @@ class _DockBar extends StatelessWidget {
                     child: IgnorePointer(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          gradient: AppColors.heroGradient,
+                          color: const Color(0xFF1E293B),
                           borderRadius: BorderRadius.circular(24),
                         ),
                       ),
@@ -427,9 +431,9 @@ class _Orb extends StatelessWidget {
         child: ScaleTransition(scale: anim, child: child),
       ),
       child: Icon(
-        open ? Icons.close_rounded : Icons.apps_rounded,
+        open ? Icons.close_rounded : Icons.grid_view_rounded,
         key: ValueKey(open),
-        color: AppColors.brandDeep,
+        color: Colors.white,
         size: 26,
       ),
     );
@@ -440,16 +444,32 @@ class _Orb extends StatelessWidget {
         width: _DockBar._orb + 8,
         height: _DockBar._orb + 8,
         padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F172A),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF3B82F6).withValues(alpha: 0.35),
+              blurRadius: 14,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
         child: DecoratedBox(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFFFD25A), AppColors.sun],
+              colors: [Color(0xFF4A8BFF), Color(0xFF1E56F0)],
             ),
-            boxShadow: [BoxShadow(color: AppColors.sun.withValues(alpha: 0.45), blurRadius: 14, offset: const Offset(0, 5))],
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1E56F0).withValues(alpha: 0.55),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Material(
             type: MaterialType.transparency,
@@ -474,7 +494,7 @@ class _DockItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? Colors.white : AppColors.slate;
+    final color = selected ? Colors.white : const Color(0xFF94A3B8);
     Widget icon = AnimatedScale(
       scale: selected ? 1.12 : 1,
       duration: const Duration(milliseconds: 260),

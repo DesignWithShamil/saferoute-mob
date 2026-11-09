@@ -425,8 +425,8 @@ class _SrClockHeaderState extends State<SrClockHeader> {
                   Container(
                     width: 46,
                     height: 46,
-                    decoration: BoxDecoration(color: AppColors.sun, borderRadius: BorderRadius.circular(16)),
-                    child: Icon(icon, color: AppColors.brandDeep, size: 25),
+                    decoration: BoxDecoration(color: AppColors.brandTint, borderRadius: BorderRadius.circular(16)),
+                    child: Icon(icon, color: AppColors.brand, size: 25),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

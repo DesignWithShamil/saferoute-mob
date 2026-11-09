@@ -28,7 +28,7 @@ class EthiyoHeroImage extends StatelessWidget {
         cacheWidth: cacheWidth,
         excludeFromSemantics: true,
         gaplessPlayback: true,
-        errorBuilder: (_, __, ___) => const DecoratedBox(
+        errorBuilder: (context, error, stackTrace) => const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
@@ -52,7 +52,7 @@ class EthiyoLogo extends StatelessWidget {
         fit: BoxFit.contain,
         cacheWidth: (width * 3).round(),
         semanticLabel: 'Ethiyo',
-        errorBuilder: (_, __, ___) => Text(
+        errorBuilder: (context, error, stackTrace) => Text(
           'Ethiyo',
           style: TextStyle(fontSize: width / 5, fontWeight: FontWeight.w900, color: const Color(0xFF0B2A5B)),
         ),

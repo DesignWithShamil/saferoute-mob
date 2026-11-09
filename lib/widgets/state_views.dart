@@ -171,9 +171,9 @@ class AppColors {
   /// Secondary accent (teal).
   static const teal = Color(0xFF12A594);
 
-  /// School-bus yellow from the Ethiyo logo: highlights and call-outs.
-  static const sun = Color(0xFFFFB400);
-  static const sunTint = Color(0xFFFFF4D6);
+  /// Brand accent highlights (azure blue; previously yellow).
+  static const sun = Color(0xFF1585E8);
+  static const sunTint = Color(0xFFE4F1FD);
 
   /// Primary text (dark navy).
   static const ink = Color(0xFF0A1F44);

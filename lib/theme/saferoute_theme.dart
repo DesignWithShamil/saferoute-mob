@@ -95,7 +95,7 @@ class SafeRouteTheme {
         elevation: 0,
         height: 68,
         backgroundColor: AppColors.brandDeep,
-        indicatorColor: AppColors.sun.withValues(alpha: 0.28),
+        indicatorColor: AppColors.brand.withValues(alpha: 0.28),
         iconTheme: WidgetStateProperty.resolveWith((states) =>
             IconThemeData(color: states.contains(WidgetState.selected) ? Colors.white : Colors.white70)),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
@@ -235,8 +235,8 @@ class SafeRouteTheme {
         dividerColor: _border,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.sun,
-        foregroundColor: AppColors.brandDeep,
+        backgroundColor: AppColors.brand,
+        foregroundColor: Colors.white,
         elevation: 4,
         shape: rr(20),
       ),

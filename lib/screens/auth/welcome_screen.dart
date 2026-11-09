@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../theme/sr_tokens.dart';
 import '../../widgets/ethiyo_brand.dart';
 import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
