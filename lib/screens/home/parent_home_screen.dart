@@ -16,6 +16,7 @@ import '../parent/parent_leaves_screen.dart';
 import '../parent/parent_route_map_screen.dart';
 import '../parent/parent_widgets.dart';
 import '../profile/profile_screen.dart';
+import '../auth/user_tutorial_screen.dart';
 import 'signed_in_shell.dart';
 
 class ParentHomeScreen extends StatefulWidget {
@@ -74,6 +75,22 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         onTap: () => Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => const NotificationsScreen(),
         )),
+      ),
+      ShellDrawerItem(
+        label: 'Help & Tutorials',
+        icon: Icons.school_outlined,
+        onTap: () {
+          final user = context.read<AuthController>().user;
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => UserTutorialScreen(
+              userId: user?.publicId,
+              initialRole: TutorialRole.parent,
+              isStandalone: true,
+              lockRole: true,
+              onFinished: () => Navigator.of(context).pop(),
+            ),
+          ));
+        },
       ),
       ShellDrawerItem(
         label: 'Profile',

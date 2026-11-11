@@ -8,6 +8,7 @@ import '../../providers/auth_controller.dart';
 import '../../providers/parent_controller.dart';
 import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
+import '../auth/user_tutorial_screen.dart';
 
 /// Account settings for every mobile role — mirrors web `pages/shared/Profile.jsx`.
 class ProfileView extends StatefulWidget {
@@ -342,6 +343,55 @@ class _ProfileViewState extends State<ProfileView> {
                           : 'Not configured in this build – alerts are still listed in the app',
                 ),
               ],
+            ),
+          ),
+        ),
+        SrFadeIn(
+          delay: const Duration(milliseconds: 210),
+          child: SectionCard(
+            title: 'Help & tutorials',
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.brand.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.school_outlined, color: AppColors.brand, size: 24),
+              ),
+              title: Text(
+                user.isParent
+                    ? 'Parent Tutorial'
+                    : user.isDriver
+                        ? 'Driver Tutorial'
+                        : 'Helper Tutorial',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.ink),
+              ),
+              subtitle: const Text(
+                'Replay the step-by-step app walkthrough anytime',
+                style: TextStyle(fontSize: 13, color: AppColors.slate),
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.slate),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => UserTutorialScreen(
+                      userId: user.publicId,
+                      initialRole: user.isParent
+                          ? TutorialRole.parent
+                          : user.isDriver
+                              ? TutorialRole.driver
+                              : TutorialRole.helper,
+                      isStandalone: true,
+                      lockRole: true,
+                      onFinished: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ),

@@ -41,4 +41,27 @@ class TokenStorage {
 
   Future<bool> get tutorialSeen async => (await _storage.read(key: _tutorialSeenKey)) == '1';
   Future<void> markTutorialSeen() => _storage.write(key: _tutorialSeenKey, value: '1');
+
+  /// Account-specific onboarding tutorial tracking.
+  /// Each user account maintains its own completion flag.
+  Future<bool> isUserTutorialSeen(String? userId) async {
+    if (userId == null || userId.isEmpty) {
+      return (await _storage.read(key: _tutorialSeenKey)) == '1';
+    }
+    final val = await _storage.read(key: '${_tutorialSeenKey}_$userId');
+    return val == '1';
+  }
+
+  Future<void> markUserTutorialSeen(String? userId) async {
+    await markTutorialSeen();
+    if (userId != null && userId.isNotEmpty) {
+      await _storage.write(key: '${_tutorialSeenKey}_$userId', value: '1');
+    }
+  }
+
+  Future<void> resetUserTutorialSeen(String? userId) async {
+    if (userId != null && userId.isNotEmpty) {
+      await _storage.delete(key: '${_tutorialSeenKey}_$userId');
+    }
+  }
 }

@@ -33,13 +33,17 @@ class UserTutorialScreen extends StatefulWidget {
   const UserTutorialScreen({
     super.key,
     required this.onFinished,
+    this.userId,
     this.initialRole = TutorialRole.parent,
     this.isStandalone = false,
+    this.lockRole = false,
   });
 
   final VoidCallback onFinished;
+  final String? userId;
   final TutorialRole initialRole;
   final bool isStandalone;
+  final bool lockRole;
 
   @override
   State<UserTutorialScreen> createState() => _UserTutorialScreenState();
@@ -73,7 +77,7 @@ class _UserTutorialScreenState extends State<UserTutorialScreen> {
 
   Future<void> _completeTutorial() async {
     final storage = TokenStorage();
-    await storage.markTutorialSeen();
+    await storage.markUserTutorialSeen(widget.userId);
     if (!mounted) return;
     widget.onFinished();
   }
@@ -83,122 +87,250 @@ class _UserTutorialScreenState extends State<UserTutorialScreen> {
       case TutorialRole.parent:
         return const [
           TutorialStep(
-            tag: 'Live Map & Tracking',
-            title: 'Track School Bus Live on Map',
+            tag: 'Child Profile',
+            title: 'View & Manage Children\'s Profiles',
             description:
-                'See the exact real-time GPS location of your child\'s school bus as it moves along its route. View estimated arrival times (ETA) at your pickup and drop stops so you never wait in the rain or heat.',
-            highlight: 'Live route updates & accurate arrival estimates on an interactive map.',
-            icon: Icons.location_on_rounded,
+                'Access your child\'s complete school profile, admission details, blood group, emergency contact numbers, assigned bus info, and medical notes in one tap.',
+            highlight: 'Keep emergency details and school contact information readily accessible.',
+            icon: Icons.badge_rounded,
             accentColor: Color(0xFF1585E8),
           ),
           TutorialStep(
-            tag: 'Boarding & Safety Alerts',
-            title: 'Instant Boarding & Drop-Off Alerts',
+            tag: 'Live Bus Tracking',
+            title: 'Track School Bus Live on Map',
             description:
-                'Receive immediate push notifications the second your child safely steps onto the bus in the morning and when they safely enter or leave the school campus.',
-            highlight: 'Instant notifications keeping you informed every step of the journey.',
-            icon: Icons.notifications_active_rounded,
-            accentColor: Color(0xFF12A594),
+                'See the exact real-time GPS location of your child\'s school bus as it travels along the route. Check live bus speed and traffic updates as it approaches your stop.',
+            highlight: 'Live GPS location streamed directly to your screen with sub-minute updates.',
+            icon: Icons.location_on_rounded,
+            accentColor: Color(0xFF0284C7),
           ),
           TutorialStep(
-            tag: 'Attendance & Leaves',
-            title: 'View Attendance & Apply for Leaves',
+            tag: 'Bus Location & Route',
+            title: 'View Bus Location, Route & ETAs',
             description:
-                'Review your child\'s transport attendance records. If your child will not be attending school, submit a leave request with one tap so the driver knows not to wait at your stop.',
-            highlight: 'One-tap leave application saves bus route time and prevents delays.',
-            icon: Icons.event_note_rounded,
+                'View morning and evening sequential route stops plotted on the interactive map with estimated arrival times (ETA) so you never wait unnecessarily in the rain or heat.',
+            highlight: 'Accurate ETA calculations keep you ahead of scheduled bus stops.',
+            icon: Icons.alt_route_rounded,
             accentColor: Color(0xFF6366F1),
           ),
           TutorialStep(
-            tag: 'Safety & Direct Contact',
-            title: 'Direct Driver Contact & Safety SOS',
+            tag: 'Pickup & Drop Attendance',
+            title: 'Check Pickup & Drop-Off Attendance',
             description:
-                'Connect directly with the assigned bus driver and helper, or reach out to the school transport coordinator in case of emergencies or route inquiries.',
-            highlight: 'Verified contact details always available at your fingertips.',
-            icon: Icons.phone_in_talk_rounded,
-            accentColor: Color(0xFF0284C7),
+                'Review verified attendance records. SafeRoute logs exact timestamps when your child boards the bus in the morning and safely steps down at the school or home stop.',
+            highlight: 'Verified timestamped records for morning pickup and afternoon drop-off.',
+            icon: Icons.fact_check_rounded,
+            accentColor: Color(0xFF10B981),
+          ),
+          TutorialStep(
+            tag: 'Student Security PIN',
+            title: 'Student Security PIN & Verification',
+            description:
+                'Every student is protected with a unique security PIN and digital transit token for safe handover. Drivers and helpers cross-verify this PIN before release.',
+            highlight: 'Secure PIN ensures your child is only handed over to authorized guardians.',
+            icon: Icons.pin_rounded,
+            accentColor: Color(0xFF8B5CF6),
+          ),
+          TutorialStep(
+            tag: 'Smart Notifications',
+            title: 'Instant Push Alerts & Notifications',
+            description:
+                'Receive immediate push notifications when the bus starts its trip, reaches nearby stops, when your child safely boards or alights, or if a delay is reported.',
+            highlight: 'Instant notifications keep you informed without needing to watch the map.',
+            icon: Icons.notifications_active_rounded,
+            accentColor: Color(0xFFF59E0B),
+          ),
+          TutorialStep(
+            tag: 'Multi-Child Management',
+            title: 'Seamlessly Manage Multiple Children',
+            description:
+                'Have multiple children registered with SafeRoute? Switch between their profiles with one tap from the top bar to track different buses, classes, and schedules.',
+            highlight: 'Easily switch and monitor each child\'s bus and route independently.',
+            icon: Icons.family_restroom_rounded,
+            accentColor: Color(0xFFEC4899),
+          ),
+          TutorialStep(
+            tag: 'Leaves & Parent Services',
+            title: 'One-Tap Leave Requests & Services',
+            description:
+                'If your child is unwell or staying home, submit a leave request with one tap. This alerts the driver instantly so the bus will not wait at your stop.',
+            highlight: 'One-tap leave application prevents unnecessary bus stops and delays.',
+            icon: Icons.event_busy_rounded,
+            accentColor: Color(0xFF14B8A6),
           ),
         ];
 
       case TutorialRole.driver:
         return const [
           TutorialStep(
-            tag: 'Route Schedules',
-            title: 'Assigned Routes & Sequential Stops',
+            tag: 'Driver Dashboard',
+            title: 'Driver Operational Dashboard',
             description:
-                'Access your daily morning and evening route plans. View sequential pickup and drop stops plotted clearly on the map along with student counts for each stop.',
-            highlight: 'Clear route overview with sequential stops and student numbers.',
-            icon: Icons.alt_route_rounded,
+                'Your central operational hub provides a crystal-clear overview of today\'s scheduled trips, assigned vehicle, route details, and total student counts at a glance.',
+            highlight: 'Your complete daily operations and trip schedule in one unified view.',
+            icon: Icons.dashboard_rounded,
             accentColor: Color(0xFF1585E8),
           ),
           TutorialStep(
-            tag: 'Trip Execution',
-            title: 'One-Tap Trip Start & Live GPS Streaming',
+            tag: 'Buses & Routes',
+            title: 'View Assigned Buses & Routes',
             description:
-                'Tap "Start Trip" when beginning your journey. SafeRoute automatically broadcasts your real-time GPS location in the background to waiting parents and school admin.',
-            highlight: 'Battery-efficient background GPS tracking runs reliably while driving.',
-            icon: Icons.play_circle_filled_rounded,
-            accentColor: Color(0xFF16A34A),
-          ),
-          TutorialStep(
-            tag: 'Delay Management',
-            title: 'Report Traffic & Route Delays',
-            description:
-                'Encountered unexpected traffic, vehicle issues, or bad weather? Tap to broadcast a 5, 10, or 15-minute delay to waiting parents automatically.',
-            highlight: 'Keeps parents informed and prevents repeated phone calls while driving.',
-            icon: Icons.access_time_filled_rounded,
+                'Inspect your assigned bus registration details, sequential morning and evening stops plotted on the interactive route map, and scheduled timing for each stop.',
+            highlight: 'Sequential stop-by-stop route breakdown with student pickup numbers.',
+            icon: Icons.directions_bus_rounded,
             accentColor: Color(0xFF0284C7),
           ),
           TutorialStep(
-            tag: 'Emergency SOS',
-            title: 'Emergency SOS Distress Broadcast',
+            tag: 'Trip Start & End',
+            title: 'Start & End Route Trips with One Tap',
             description:
-                'In any critical road incident or emergency breakdown, tap the SOS button to instantly alert the school transport management and trigger rapid response.',
-            highlight: 'Immediate dispatch support directly to school authorities.',
+                'Tap "Start Trip" when commencing your morning or afternoon route. When all stops are completed and students have alighted, tap "End Trip" to conclude.',
+            highlight: 'Simple one-touch workflow to start and close daily bus routes.',
+            icon: Icons.play_circle_fill_rounded,
+            accentColor: Color(0xFF10B981),
+          ),
+          TutorialStep(
+            tag: 'Live GPS Tracking',
+            title: 'Continuous Background GPS Tracking',
+            description:
+                'During active trips, SafeRoute automatically streams high-accuracy GPS coordinates in the background, allowing waiting parents and school dispatch to track your live position.',
+            highlight: 'Battery-efficient background GPS tracking operates seamlessly while driving.',
+            icon: Icons.my_location_rounded,
+            accentColor: Color(0xFF6366F1),
+          ),
+          TutorialStep(
+            tag: 'Mark Student Boarding',
+            title: 'Mark Student Boarding at Each Stop',
+            description:
+                'At every pickup stop, easily mark students as they board the bus. SafeRoute immediately sends push alerts to parents confirming their child is safely on board.',
+            highlight: 'Instant boarding confirmation keeps parents and school dispatch in sync.',
+            icon: Icons.person_add_alt_1_rounded,
+            accentColor: Color(0xFF14B8A6),
+          ),
+          TutorialStep(
+            tag: 'Mark Student Dropping',
+            title: 'Mark Student Dropping at School & Stops',
+            description:
+                'When arriving at the school campus or student drop stops, mark alighting students to complete their transit record and notify parents immediately.',
+            highlight: 'Ensures every student is accounted for when alighting from the bus.',
+            icon: Icons.person_remove_rounded,
+            accentColor: Color(0xFFF59E0B),
+          ),
+          TutorialStep(
+            tag: 'Attendance & PIN',
+            title: 'Student Attendance & Security PIN',
+            description:
+                'Verify student attendance and use the student security PIN when handing over young students to authorized guardians at afternoon drop-off.',
+            highlight: 'PIN verification guarantees authorized and safe child handovers.',
+            icon: Icons.verified_user_rounded,
+            accentColor: Color(0xFF8B5CF6),
+          ),
+          TutorialStep(
+            tag: 'Emergency SOS',
+            title: 'SOS Distress & Emergency Broadcast',
+            description:
+                'In critical road incidents, breakdowns, or medical emergencies, hold the SOS button to instantly alert school dispatch and broadcast rapid distress warnings.',
+            highlight: 'Immediate multi-channel emergency broadcast direct to authorities.',
             icon: Icons.emergency_rounded,
-            accentColor: Color(0xFFDC2626),
+            accentColor: Color(0xFFEF4444),
+          ),
+          TutorialStep(
+            tag: 'Notifications & Alerts',
+            title: 'Route Notifications & Delay Reports',
+            description:
+                'Stay updated with immediate notifications when parents apply for leave so you skip unnecessary stops, and broadcast 5 or 10-minute traffic delay notices in one tap.',
+            highlight: 'Real-time leave updates prevent waiting at empty stops.',
+            icon: Icons.notifications_active_rounded,
+            accentColor: Color(0xFF0284C7),
           ),
         ];
 
       case TutorialRole.helper:
         return const [
           TutorialStep(
-            tag: 'Student Roster',
-            title: 'Stop-by-Stop Student Boarding Roster',
+            tag: 'Helper Dashboard',
+            title: 'Helper Operational Dashboard',
             description:
-                'View the verified roster of students scheduled for each stop. Know exactly who is boarding, who is dropping off, and who is on approved leave today.',
-            highlight: 'Students on leave are clearly flagged so you do not wait unnecessarily.',
-            icon: Icons.checklist_rounded,
+                'Your operational dashboard displays today\'s bus assignment, driver partner details, morning and evening route schedule, and total assigned students.',
+            highlight: 'Daily overview tailored for student safety and stop management.',
+            icon: Icons.shield_rounded,
             accentColor: Color(0xFF1585E8),
           ),
           TutorialStep(
-            tag: 'Quick Attendance',
-            title: 'QR Code Scanning & One-Tap Boarding',
+            tag: 'Assigned Routes',
+            title: 'Review Assigned Routes & Stops',
             description:
-                'Scan student QR identity cards with your camera or tap "Boarded" to mark attendance in under two seconds with instant auditory confirmation.',
-            highlight: 'Fast, error-free attendance verification at every stop.',
-            icon: Icons.qr_code_scanner_rounded,
-            accentColor: Color(0xFF12A594),
+                'Inspect route schedules, sequential stops, and estimated arrival times so you can prepare students for orderly boarding and alighting.',
+            highlight: 'Sequential stop sequence with expected timings and student counts.',
+            icon: Icons.alt_route_rounded,
+            accentColor: Color(0xFF0284C7),
           ),
           TutorialStep(
-            tag: 'Parent Contact',
-            title: 'One-Tap Parent Contact Details',
+            tag: 'Student Lists',
+            title: 'Stop-by-Stop Student Rosters',
             description:
-                'If a student hasn\'t reached the stop on time, tap their profile card to call their parent or emergency guardian immediately from the app.',
-            highlight: 'Instant access to parent phone numbers for every student on board.',
-            icon: Icons.contact_phone_rounded,
+                'Access the complete verified roster of students assigned to each stop. View student photos, classes, parent contact numbers, and special medical notes.',
+            highlight: 'Complete student profiles and guardian contact numbers at your fingertips.',
+            icon: Icons.people_alt_rounded,
             accentColor: Color(0xFF6366F1),
           ),
           TutorialStep(
-            tag: 'Safety Verification',
-            title: 'Mandatory "No Child Left Behind" Sweep',
+            tag: 'Mark Boarding',
+            title: 'Mark Boarding Attendance & QR Scanning',
             description:
-                'Perform the mandatory physical seat sweep from front to back of the bus to ensure every child has safely alighted before completing the trip.',
-            highlight: 'Mandatory safety protocol protecting every single student.',
-            icon: Icons.verified_user_rounded,
-            accentColor: Color(0xFF16A34A),
+                'Tap "Boarded" or scan student digital QR transit passes as children enter the bus. Students on approved leave are clearly marked so you don\'t wait.',
+            highlight: 'Fast, error-free attendance verification with instant confirmation.',
+            icon: Icons.how_to_reg_rounded,
+            accentColor: Color(0xFF10B981),
+          ),
+          TutorialStep(
+            tag: 'Mark Dropping',
+            title: 'Mark Dropping Attendance Safely',
+            description:
+                'As students reach the school gates or evening neighborhood stops, verify and mark their drop-off attendance and ensure all personal belongings are taken.',
+            highlight: 'Guarantees that every child reaches their designated drop destination safely.',
+            icon: Icons.check_circle_rounded,
+            accentColor: Color(0xFF14B8A6),
+          ),
+          TutorialStep(
+            tag: 'Verify Security PIN',
+            title: 'Verify Student Security PIN',
+            description:
+                'Cross-check the guardian\'s security PIN before releasing young children at afternoon drop stops to ensure the person receiving the child is authorized.',
+            highlight: 'Strict guardian verification prevents unauthorized child pickups.',
+            icon: Icons.pin_rounded,
+            accentColor: Color(0xFF8B5CF6),
+          ),
+          TutorialStep(
+            tag: 'Trip Status & Sweep',
+            title: 'Monitor Trip Status & Bus Sweep',
+            description:
+                'Monitor active trip progression and perform the mandatory "No Child Left Behind" end-of-trip physical seat check from front to back of the bus.',
+            highlight: 'Mandatory final safety sweep guarantees no child is left behind.',
+            icon: Icons.fact_check_rounded,
+            accentColor: Color(0xFFF59E0B),
+          ),
+          TutorialStep(
+            tag: 'Alerts & SOS',
+            title: 'Notifications & Emergency Features',
+            description:
+                'Stay updated on parent leave submissions, view route notifications, and trigger the emergency SOS distress button during road breakdowns or emergencies.',
+            highlight: 'Direct emergency channel to school transport coordinators.',
+            icon: Icons.emergency_rounded,
+            accentColor: Color(0xFFEF4444),
           ),
         ];
+    }
+  }
+
+  String get _roleBadgeTitle {
+    switch (_selectedRole) {
+      case TutorialRole.parent:
+        return 'Parent Onboarding Guide';
+      case TutorialRole.driver:
+        return 'Driver Onboarding Guide';
+      case TutorialRole.helper:
+        return 'Helper Onboarding Guide';
     }
   }
 
@@ -219,12 +351,12 @@ class _UserTutorialScreenState extends State<UserTutorialScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Header with Logo & Skip Action
+              // Top Bar with Logo & Skip Action
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 16, 6),
                 child: Row(
                   children: [
-                    const EthiyoLogo(width: 140),
+                    const EthiyoLogo(width: 130),
                     const Spacer(),
                     TextButton(
                       onPressed: _completeTutorial,
@@ -232,63 +364,87 @@ class _UserTutorialScreenState extends State<UserTutorialScreen> {
                         foregroundColor: AppColors.slate,
                         textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                       ),
-                      child: Text(widget.isStandalone ? 'Close' : 'Skip'),
+                      child: Text(widget.isStandalone ? 'Close' : 'Skip Tutorial'),
                     ),
                   ],
                 ),
               ),
 
-              // Role Selector Header
+              // Role Selector or Locked Role Header
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
-                      'How to Use SafeRoute',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.brandDeep,
-                        letterSpacing: -0.4,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.lockRole ? _roleBadgeTitle : 'How to Use SafeRoute',
+                            style: const TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.brandDeep,
+                              letterSpacing: -0.4,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.brand.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Step ${_currentPage + 1} of ${steps.length}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.brand,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 2),
-                    const Text(
-                      'Select your user role to view your step-by-step guide:',
-                      style: TextStyle(fontSize: 13, color: AppColors.slate, fontWeight: FontWeight.w500),
+                    Text(
+                      widget.lockRole
+                          ? 'Follow this quick tutorial to get started with your role features:'
+                          : 'Select your role below to view your personalized guide:',
+                      style: const TextStyle(fontSize: 13, color: AppColors.slate, fontWeight: FontWeight.w500),
                     ),
-                    const SizedBox(height: 12),
-                    // 3 Role Tabs
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(16),
+                    if (!widget.lockRole) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            _RoleTab(
+                              title: 'Parent',
+                              icon: Icons.family_restroom_rounded,
+                              selected: _selectedRole == TutorialRole.parent,
+                              onTap: () => _onRoleChanged(TutorialRole.parent),
+                            ),
+                            _RoleTab(
+                              title: 'Driver',
+                              icon: Icons.directions_bus_rounded,
+                              selected: _selectedRole == TutorialRole.driver,
+                              onTap: () => _onRoleChanged(TutorialRole.driver),
+                            ),
+                            _RoleTab(
+                              title: 'Helper',
+                              icon: Icons.shield_rounded,
+                              selected: _selectedRole == TutorialRole.helper,
+                              onTap: () => _onRoleChanged(TutorialRole.helper),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          _RoleTab(
-                            title: 'Parent',
-                            icon: Icons.family_restroom_rounded,
-                            selected: _selectedRole == TutorialRole.parent,
-                            onTap: () => _onRoleChanged(TutorialRole.parent),
-                          ),
-                          _RoleTab(
-                            title: 'Driver',
-                            icon: Icons.directions_bus_rounded,
-                            selected: _selectedRole == TutorialRole.driver,
-                            onTap: () => _onRoleChanged(TutorialRole.driver),
-                          ),
-                          _RoleTab(
-                            title: 'Helper',
-                            icon: Icons.shield_rounded,
-                            selected: _selectedRole == TutorialRole.helper,
-                            onTap: () => _onRoleChanged(TutorialRole.helper),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -306,7 +462,7 @@ class _UserTutorialScreenState extends State<UserTutorialScreen> {
                 ),
               ),
 
-              // Bottom Indicator & Next / Start Buttons
+              // Bottom Indicator & Next / Start / Previous Buttons
               Padding(
                 padding: EdgeInsets.fromLTRB(20, 10, 20, insets.bottom > 0 ? 10 : 20),
                 child: Row(
@@ -317,9 +473,9 @@ class _UserTutorialScreenState extends State<UserTutorialScreen> {
                         steps.length,
                         (i) => AnimatedContainer(
                           duration: const Duration(milliseconds: 220),
-                          margin: const EdgeInsets.only(right: 6),
-                          width: _currentPage == i ? 24 : 8,
-                          height: 8,
+                          margin: const EdgeInsets.only(right: 5),
+                          width: _currentPage == i ? 22 : 7,
+                          height: 7,
                           decoration: BoxDecoration(
                             color: _currentPage == i ? AppColors.brand : const Color(0xFFCBD5E1),
                             borderRadius: BorderRadius.circular(4),
@@ -329,25 +485,29 @@ class _UserTutorialScreenState extends State<UserTutorialScreen> {
                     ),
                     const Spacer(),
 
-                    // Back button if past step 0
+                    // Previous button if past step 0
                     if (_currentPage > 0) ...[
-                      IconButton.filledTonal(
+                      OutlinedButton.icon(
                         onPressed: () {
                           _pageController.previousPage(
                             duration: const Duration(milliseconds: 260),
                             curve: Curves.easeOutCubic,
                           );
                         },
-                        icon: const Icon(Icons.arrow_back_rounded, size: 20),
-                        style: IconButton.styleFrom(
-                          backgroundColor: const Color(0xFFF1F5F9),
+                        icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                        label: const Text('Back'),
+                        style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.brandDeep,
+                          side: const BorderSide(color: Color(0xFFCBD5E1)),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                     ],
 
-                    // Next / Get Started button
+                    // Next / Finish button
                     ElevatedButton(
                       onPressed: () {
                         if (isLastStep) {
@@ -362,7 +522,7 @@ class _UserTutorialScreenState extends State<UserTutorialScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.brand,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         elevation: 2,
                         shadowColor: AppColors.brand.withValues(alpha: 0.35),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -371,7 +531,7 @@ class _UserTutorialScreenState extends State<UserTutorialScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            isLastStep ? (widget.isStandalone ? 'Got it!' : 'Get Started') : 'Next',
+                            isLastStep ? (widget.isStandalone ? 'Got it!' : 'Finish') : 'Next',
                             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                           ),
                           const SizedBox(width: 6),
@@ -470,7 +630,7 @@ class _TutorialCard extends StatelessWidget {
         children: [
           // Visual Illustration Frame
           Container(
-            height: 190,
+            height: 185,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -601,7 +761,7 @@ class _TutorialCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          // Highlight Box
+          // Highlight / Tip Box
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             decoration: BoxDecoration(
@@ -633,4 +793,3 @@ class _TutorialCard extends StatelessWidget {
     );
   }
 }
-

@@ -75,7 +75,7 @@ class SafeRouteApp extends StatelessWidget {
   }
 }
 
-/// First-time user tutorial check, then welcome screen, then sign-in.
+/// Welcome screen on first open, then sign-in.
 class _SignedOutFlow extends StatefulWidget {
   const _SignedOutFlow();
 
@@ -86,42 +86,8 @@ class _SignedOutFlow extends StatefulWidget {
 }
 
 class _SignedOutFlowState extends State<_SignedOutFlow> {
-  bool? _seenTutorial;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkTutorialStatus();
-  }
-
-  Future<void> _checkTutorialStatus() async {
-    final seen = await TokenStorage().tutorialSeen;
-    if (mounted) {
-      setState(() => _seenTutorial = seen);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_seenTutorial == null) {
-      return const Scaffold(
-        backgroundColor: AppColors.brandDeep,
-        body: LoadingView(label: 'Starting SafeRoute…', branded: true),
-      );
-    }
-
-    if (!_seenTutorial!) {
-      return UserTutorialScreen(
-        key: const ValueKey('first_time_tutorial'),
-        onFinished: () async {
-          await TokenStorage().markTutorialSeen();
-          if (mounted) {
-            setState(() => _seenTutorial = true);
-          }
-        },
-      );
-    }
-
     return AnimatedSwitcher(
       duration: SrMotion.of(context, SrMotion.slow),
       child: _SignedOutFlow._welcomed
@@ -134,7 +100,7 @@ class _SignedOutFlowState extends State<_SignedOutFlow> {
   }
 }
 
-/// Picks the home screen for the signed-in role.
+/// Picks the home screen for the signed-in role with automatic first-login role-based tutorial check.
 class _RoleGate extends StatelessWidget {
   const _RoleGate();
 
@@ -155,12 +121,83 @@ class _RoleGate extends StatelessWidget {
         return const _SignedOutFlow();
       case AuthStatus.signedIn:
         final user = auth.user!;
-        return switch (user.role) {
-          UserRole.driver || UserRole.helper => OperatorHomeScreen(key: ValueKey(user.publicId)),
-          UserRole.parent => ParentHomeScreen(key: ValueKey(user.publicId)),
-          _ => const _UnsupportedRole(),
-        };
+        return _RoleTutorialGate(
+          key: ValueKey('role_tutorial_${user.publicId}'),
+          user: user,
+          child: switch (user.role) {
+            UserRole.driver || UserRole.helper => OperatorHomeScreen(key: ValueKey(user.publicId)),
+            UserRole.parent => ParentHomeScreen(key: ValueKey(user.publicId)),
+            _ => const _UnsupportedRole(),
+          },
+        );
     }
+  }
+}
+
+class _RoleTutorialGate extends StatefulWidget {
+  const _RoleTutorialGate({super.key, required this.user, required this.child});
+  final AppUser user;
+  final Widget child;
+
+  @override
+  State<_RoleTutorialGate> createState() => _RoleTutorialGateState();
+}
+
+class _RoleTutorialGateState extends State<_RoleTutorialGate> {
+  bool? _hasSeenTutorial;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkTutorialStatus();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RoleTutorialGate oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.user.publicId != widget.user.publicId) {
+      _checkTutorialStatus();
+    }
+  }
+
+  Future<void> _checkTutorialStatus() async {
+    final seen = await TokenStorage().isUserTutorialSeen(widget.user.publicId);
+    if (mounted) {
+      setState(() => _hasSeenTutorial = seen);
+    }
+  }
+
+  TutorialRole _roleForUser(AppUser user) {
+    if (user.isDriver) return TutorialRole.driver;
+    if (user.isHelper) return TutorialRole.helper;
+    return TutorialRole.parent;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasSeenTutorial == null) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: LoadingView(label: 'Preparing your workspace…', branded: true),
+      );
+    }
+
+    if (!_hasSeenTutorial!) {
+      return UserTutorialScreen(
+        key: ValueKey('first_login_tutorial_${widget.user.publicId}'),
+        userId: widget.user.publicId,
+        initialRole: _roleForUser(widget.user),
+        lockRole: true,
+        onFinished: () async {
+          await TokenStorage().markUserTutorialSeen(widget.user.publicId);
+          if (mounted) {
+            setState(() => _hasSeenTutorial = true);
+          }
+        },
+      );
+    }
+
+    return widget.child;
   }
 }
 

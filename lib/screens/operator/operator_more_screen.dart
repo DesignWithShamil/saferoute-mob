@@ -5,6 +5,7 @@ import '../../providers/auth_controller.dart';
 import '../../widgets/state_views.dart';
 import '../notifications/preferences_screen.dart';
 import '../profile/profile_screen.dart';
+import '../auth/user_tutorial_screen.dart';
 import 'operator_route_map_screen.dart';
 import 'sos_screen.dart';
 import 'trip_history_screen.dart';
@@ -16,7 +17,8 @@ class OperatorMoreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDriver = context.watch<AuthController>().user?.isDriver ?? false;
+    final user = context.watch<AuthController>().user;
+    final isDriver = user?.isDriver ?? false;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -25,6 +27,19 @@ class OperatorMoreScreen extends StatelessWidget {
           _tile(context, Icons.map_outlined, 'Route map', 'Assigned pickup and drop stops', const OperatorRouteMapScreen()),
         _tile(context, Icons.sos, 'Emergency SOS', 'Alert school admins and parents', const SosScreen()),
         _tile(context, Icons.notifications_outlined, 'Alert preferences', 'Choose which alerts you receive', const NotificationPreferencesScreen()),
+        _tile(
+          context,
+          Icons.school_outlined,
+          'Help & Tutorials',
+          isDriver ? 'Driver step-by-step tutorial' : 'Helper step-by-step tutorial',
+          UserTutorialScreen(
+            userId: user?.publicId,
+            initialRole: isDriver ? TutorialRole.driver : TutorialRole.helper,
+            isStandalone: true,
+            lockRole: true,
+            onFinished: () => Navigator.of(context).pop(),
+          ),
+        ),
         _tile(context, Icons.person_outline, 'Profile', 'Account, school and sign out', const ProfileView()),
       ],
     );
@@ -38,9 +53,9 @@ class OperatorMoreScreen extends StatelessWidget {
           subtitle: Text(subtitle),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
-            if (page is NotificationPreferencesScreen || page is ProfileView) {
+            if (page is NotificationPreferencesScreen || page is ProfileView || page is UserTutorialScreen) {
               Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => page is NotificationPreferencesScreen
+                builder: (_) => (page is NotificationPreferencesScreen || page is UserTutorialScreen)
                     ? page
                     : Scaffold(appBar: AppBar(title: Text(title)), body: page),
               ));
