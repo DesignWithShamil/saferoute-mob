@@ -1,9 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/config/env.dart';
 import '../../providers/auth_controller.dart';
 import '../../theme/sr_tokens.dart';
 import '../../widgets/ethiyo_brand.dart';
@@ -116,6 +114,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     final sessionMessage = context.select<AuthController, String?>((a) => a.message);
     final theme = Theme.of(context);
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final heroHeight = (screenHeight * 0.36).clamp(250.0, 350.0);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -150,9 +150,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               child: child,
                             ),
                           ),
-                          child: const SrAuthHero(
+                          child: SrAuthHero(
                             showLogo: false,
-                            heroHeight: 255.0,
+                            heroHeight: heroHeight,
                             title: '',
                             subtitle: '',
                           ),
@@ -169,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
@@ -272,16 +272,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   label: const Text('New parent? Sign up'),
                                   onPressed: _busy ? null : () => Navigator.of(context).push(srFadeRoute(const ParentRegisterScreen())),
                                 ),
-                                if (kDebugMode) ...[
-                                  const SizedBox(height: 14),
-                                  Text('API: ${Env.apiBaseUrl}', textAlign: TextAlign.center, style: theme.textTheme.labelSmall),
-                                  if (Env.apiBaseUrl.contains('10.0.2.2'))
-                                    Text(
-                                      'On a physical phone, set API_BASE_URL to your PC IP in env/dev.json',
-                                      textAlign: TextAlign.center,
-                                      style: theme.textTheme.labelSmall?.copyWith(color: AppColors.onTint(AppColors.amber)),
-                                    ),
-                                ],
                               ],
                             ),
                           ),
