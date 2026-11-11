@@ -80,6 +80,7 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
                       if (r.stop != null) r.stop!.name,
                       if (r.busNumber != null && r.busNumber!.isNotEmpty) 'Bus ${r.busNumber}',
                     ].join(' · ');
+                    final timing = _timingText(r);
                     return SrFadeIn(
                       delay: Duration(milliseconds: 40 * (i > 8 ? 8 : i)),
                       child: Card(
@@ -125,6 +126,32 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
                                           style: const TextStyle(fontSize: 12, color: AppColors.slate),
                                         ),
                                       ),
+                                    if (timing != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.access_time_rounded,
+                                              size: 13,
+                                              color: evening ? const Color(0xFFD97706) : AppColors.brand,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                timing,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: evening ? const Color(0xFFB45309) : AppColors.brandDeep,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ),
@@ -143,6 +170,21 @@ class _ParentAttendanceScreenState extends State<ParentAttendanceScreen> {
         ),
       ],
     );
+  }
+
+  static String? _timingText(AttendanceRecord r) {
+    final fmt = DateFormat('h:mm a');
+    final parts = <String>[];
+    if (r.boardedAt != null) {
+      parts.add('Boarded: ${fmt.format(r.boardedAt!.toLocal())}');
+    }
+    if (r.droppedAt != null) {
+      parts.add('Dropped: ${fmt.format(r.droppedAt!.toLocal())}');
+    }
+    if (parts.isEmpty && r.createdAt != null && r.status.toUpperCase() != 'ABSENT') {
+      parts.add('Marked: ${fmt.format(r.createdAt!.toLocal())}');
+    }
+    return parts.isEmpty ? null : parts.join('  •  ');
   }
 
   static String _date(String iso) {

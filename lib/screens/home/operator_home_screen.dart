@@ -10,8 +10,6 @@ import '../operator/students_roster_screen.dart';
 import '../operator/trip_dashboard.dart';
 import '../operator/trip_history_screen.dart';
 import '../profile/profile_screen.dart';
-import '../auth/user_tutorial_screen.dart';
-import '../../providers/auth_controller.dart';
 import 'signed_in_shell.dart';
 
 /// Home for DRIVER and HELPER.
@@ -69,22 +67,6 @@ class OperatorHomeScreen extends StatelessWidget {
         onTap: () => Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => Scaffold(appBar: AppBar(title: const Text('Emergency SOS')), body: const SosScreen()),
         )),
-      ),
-      ShellDrawerItem(
-        label: 'Help & Tutorials',
-        icon: Icons.school_outlined,
-        onTap: () {
-          final user = context.read<AuthController>().user;
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => UserTutorialScreen(
-              userId: user?.publicId,
-              initialRole: (user?.isDriver ?? false) ? TutorialRole.driver : TutorialRole.helper,
-              isStandalone: true,
-              lockRole: true,
-              onFinished: () => Navigator.of(context).pop(),
-            ),
-          ));
-        },
       ),
       ShellDrawerItem(
         label: 'Profile',

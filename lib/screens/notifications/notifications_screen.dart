@@ -308,19 +308,7 @@ class _NotificationTile extends StatelessWidget {
         _ => Icons.notifications_outlined,
       };
 
-  bool get _isAnnouncement {
-    final t = item.type.toUpperCase();
-    final title = item.title.toLowerCase();
-    final msg = item.message.toLowerCase();
-    final kind = (item.data['kind'] ?? '').toLowerCase();
-    return t == 'STAFF_MESSAGE' ||
-        t == 'HOLIDAY_NOTICE' ||
-        kind == 'school_announcement' ||
-        title.contains('announcement') ||
-        msg.contains('announcement') ||
-        title.contains('broadcast') ||
-        msg.contains('broadcast');
-  }
+  bool get _isAnnouncement => item.isAnnouncement;
 
   String get _cleanTitle {
     final title = item.title;

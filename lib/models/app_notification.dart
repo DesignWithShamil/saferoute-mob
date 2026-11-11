@@ -31,6 +31,22 @@ class AppNotification {
   final String? studentPublicId;
   final bool isEdited;
 
+  bool get isAnnouncement {
+    final t = type.toUpperCase();
+    final titleLower = title.toLowerCase();
+    final msgLower = message.toLowerCase();
+    final kind = (data['kind'] ?? '').toLowerCase();
+    return t == 'STAFF_MESSAGE' ||
+        t == 'HOLIDAY_NOTICE' ||
+        kind == 'school_announcement' ||
+        titleLower.contains('announcement') ||
+        msgLower.contains('announcement') ||
+        titleLower.contains('broadcast') ||
+        msgLower.contains('broadcast');
+  }
+
+  bool get isAlert => !isAnnouncement;
+
   AppNotification copyWith({
     bool? isRead,
     String? title,

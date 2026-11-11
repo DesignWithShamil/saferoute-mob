@@ -103,7 +103,13 @@ class NotificationsController extends ChangeNotifier {
         search: searchQuery,
       );
       if (request != _loadRequest) return;
-      items = page.items;
+      var loaded = page.items;
+      if (categoryFilter == 'ALERTS') {
+        loaded = loaded.where((n) => n.isAlert).toList();
+      } else if (categoryFilter == 'ANNOUNCEMENTS') {
+        loaded = loaded.where((n) => n.isAnnouncement).toList();
+      }
+      items = loaded;
       hasMore = page.hasMore;
       _page = 1;
       unread = await _s.notifications.unreadCount();
@@ -128,7 +134,13 @@ class NotificationsController extends ChangeNotifier {
         category: categoryFilter,
         search: searchQuery,
       );
-      items = [...items, ...page.items];
+      var moreItems = page.items;
+      if (categoryFilter == 'ALERTS') {
+        moreItems = moreItems.where((n) => n.isAlert).toList();
+      } else if (categoryFilter == 'ANNOUNCEMENTS') {
+        moreItems = moreItems.where((n) => n.isAnnouncement).toList();
+      }
+      items = [...items, ...moreItems];
       hasMore = page.hasMore;
       _page += 1;
     } catch (_) {

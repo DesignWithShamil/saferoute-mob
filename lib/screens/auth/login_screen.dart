@@ -6,12 +6,12 @@ import 'package:provider/provider.dart';
 import '../../core/config/env.dart';
 import '../../providers/auth_controller.dart';
 import '../../theme/sr_tokens.dart';
+import '../../widgets/ethiyo_brand.dart';
 import '../../widgets/sr_animations.dart';
 import '../../widgets/sr_transitions.dart';
 import '../../widgets/state_views.dart';
 import 'forgot_password_screen.dart';
 import 'parent_register_screen.dart';
-import 'user_tutorial_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -78,23 +78,32 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const SrAuthHero(
-                          showLogo: true,
-                          title: 'Ethiyo',
+                          showLogo: false,
+                          compact: true,
+                          title: '',
                           subtitle: '',
                         ),
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              const Center(
+                                child: SrFadeIn(
+                                  child: Padding(
+                                    padding: EdgeInsets.only(top: 2, bottom: 12),
+                                    child: EthiyoLogo(width: 175),
+                                  ),
+                                ),
+                              ),
                               SrFadeIn(
                                 delay: const Duration(milliseconds: 60),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    Text('Welcome back', style: theme.textTheme.headlineSmall?.copyWith(color: AppColors.brandDeep)),
+                                    Text('Welcome back', style: theme.textTheme.headlineSmall?.copyWith(color: AppColors.brandDeep, fontWeight: FontWeight.w800)),
                                     const SizedBox(height: 4),
-                                    const Text('Sign in to your account', style: TextStyle(color: AppColors.slate, fontSize: 15)),
+                                    const Text('Sign in to your account', style: TextStyle(color: AppColors.slate, fontSize: 14)),
                                   ],
                                 ),
                               ),
@@ -159,35 +168,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 label: const Text('New parent? Sign up'),
                                 onPressed: _busy ? null : () => Navigator.of(context).push(srFadeRoute(const ParentRegisterScreen())),
                               ),
-                              const SizedBox(height: 8),
-                              TextButton.icon(
-                                icon: const Icon(Icons.menu_book_rounded, size: 18),
-                                label: const Text('How to use the app? (Tutorial Guide)'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: AppColors.brand,
-                                  textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-                                ),
-                                onPressed: _busy
-                                    ? null
-                                    : () => Navigator.of(context).push(
-                                          srFadeRoute(
-                                            UserTutorialScreen(
-                                              isStandalone: true,
-                                              onFinished: () => Navigator.of(context).pop(),
-                                            ),
-                                          ),
-                                        ),
-                              ),
-                              const SizedBox(height: 22),
-                              const Center(
-                                child: Text(
-                                  'Ethiyo  •  School Transport Management',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 12.5, color: AppColors.slate),
-                                ),
-                              ),
                               if (kDebugMode) ...[
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 14),
                                 Text('API: ${Env.apiBaseUrl}', textAlign: TextAlign.center, style: theme.textTheme.labelSmall),
                                 if (Env.apiBaseUrl.contains('10.0.2.2'))
                                   Text(
