@@ -284,8 +284,8 @@ class _AnimatedBottomSheet extends StatelessWidget {
                 animation: Listenable.merge([buttonScaleAnimation, pulseAnimation]),
                 builder: (context, child) {
                   final entranceScale = buttonScaleAnimation.value;
-                  // Subtle breathing scale between 1.0 and 1.06
-                  final pulseScale = 1.0 + (pulseAnimation.value * 0.06);
+                  // Subtle breathing scale between 1.0 and 1.05
+                  final pulseScale = 1.0 + (pulseAnimation.value * 0.05);
                   return Transform.scale(
                     scale: entranceScale * pulseScale,
                     child: child,
@@ -295,27 +295,30 @@ class _AnimatedBottomSheet extends StatelessWidget {
                   button: true,
                   label: 'Get started',
                   excludeSemantics: true,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: Ink(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: AppColors.heroGradient,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.brand.withValues(alpha: 0.40),
-                            blurRadius: 18,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: AppColors.heroGradient,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.brand.withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      shape: const CircleBorder(),
+                      clipBehavior: Clip.antiAlias,
                       child: InkWell(
                         customBorder: const CircleBorder(),
                         onTap: onContinue,
-                        child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 28),
+                        child: const Center(
+                          child: Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 26),
+                        ),
                       ),
                     ),
                   ),

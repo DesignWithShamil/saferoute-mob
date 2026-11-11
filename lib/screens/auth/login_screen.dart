@@ -20,7 +20,15 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+  late final Animation<double> _heroScale;
+  late final Animation<double> _heroFade;
+  late final Animation<Offset> _sheetSlide;
+  late final Animation<double> _sheetFade;
+  late final Animation<double> _logoScale;
+  late final Animation<double> _logoFade;
+
   final _form = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
@@ -29,7 +37,61 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    );
+
+    _heroScale = Tween<double>(begin: 1.08, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: const Interval(0.0, 0.75, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _heroFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: const Interval(0.0, 0.45, curve: Curves.easeIn),
+      ),
+    );
+
+    _sheetSlide = Tween<Offset>(begin: const Offset(0, 48), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: const Interval(0.18, 0.85, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _sheetFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: const Interval(0.18, 0.65, curve: Curves.easeOut),
+      ),
+    );
+
+    _logoScale = Tween<double>(begin: 0.86, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: const Interval(0.28, 0.90, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: const Interval(0.25, 0.65, curve: Curves.easeOut),
+      ),
+    );
+
+    _animController.forward();
+  }
+
+  @override
   void dispose() {
+    _animController.dispose();
     _email.dispose();
     _password.dispose();
     super.dispose();
@@ -54,6 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final sessionMessage = context.select<AuthController, String?>((a) => a.message);
     final theme = Theme.of(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       resizeToAvoidBottomInset: true,
@@ -77,108 +140,150 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SrAuthHero(
-                          showLogo: false,
-                          compact: true,
-                          title: '',
-                          subtitle: '',
+                        // Animated Hero scene at top
+                        AnimatedBuilder(
+                          animation: _animController,
+                          builder: (context, child) => Opacity(
+                            opacity: _heroFade.value,
+                            child: Transform.scale(
+                              scale: _heroScale.value,
+                              child: child,
+                            ),
+                          ),
+                          child: const SrAuthHero(
+                            showLogo: false,
+                            compact: true,
+                            title: '',
+                            subtitle: '',
+                          ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const Center(
-                                child: SrFadeIn(
-                                  child: Padding(
-                                    padding: EdgeInsets.only(top: 2, bottom: 12),
-                                    child: EthiyoLogo(width: 175),
-                                  ),
-                                ),
-                              ),
-                              SrFadeIn(
-                                delay: const Duration(milliseconds: 60),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Text('Welcome back', style: theme.textTheme.headlineSmall?.copyWith(color: AppColors.brandDeep, fontWeight: FontWeight.w800)),
-                                    const SizedBox(height: 4),
-                                    const Text('Sign in to your account', style: TextStyle(color: AppColors.slate, fontSize: 14)),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              if (sessionMessage != null && _error == null)
-                                _Banner(message: sessionMessage, color: AppColors.amber, icon: Icons.info_outline_rounded),
-                              TextFormField(
-                                controller: _email,
-                                keyboardType: TextInputType.emailAddress,
-                                autofillHints: const [AutofillHints.email, AutofillHints.username],
-                                textInputAction: TextInputAction.next,
-                                decoration: const InputDecoration(labelText: 'Email address', prefixIcon: Icon(Icons.mail_outline_rounded)),
-                                validator: (v) => (v == null || !v.contains('@')) ? 'Enter your email' : null,
-                              ),
-                              const SizedBox(height: 14),
-                              TextFormField(
-                                controller: _password,
-                                obscureText: _obscure,
-                                autofillHints: const [AutofillHints.password],
-                                textInputAction: TextInputAction.done,
-                                onFieldSubmitted: (_) => _submit(),
-                                decoration: InputDecoration(
-                                  labelText: 'Password',
-                                  prefixIcon: const Icon(Icons.lock_outline_rounded),
-                                  suffixIcon: IconButton(
-                                    tooltip: _obscure ? 'Show password' : 'Hide password',
-                                    icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                                    onPressed: () => setState(() => _obscure = !_obscure),
-                                  ),
-                                ),
-                                validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
-                              ),
-                              AnimatedSize(
-                                duration: SrMotion.of(context, SrMotion.base),
-                                curve: SrMotion.curve,
-                                alignment: Alignment.topCenter,
-                                child: _error == null
-                                    ? const SizedBox(width: double.infinity)
-                                    : Padding(
-                                        padding: const EdgeInsets.only(top: 14),
-                                        child: _Banner(message: _error!, color: AppColors.red, icon: Icons.error_outline_rounded),
+
+                        // Form sheet with entrance animation & pulled up to remove empty white space
+                        AnimatedBuilder(
+                          animation: _animController,
+                          builder: (context, child) => Opacity(
+                            opacity: _sheetFade.value,
+                            child: Transform.translate(
+                              offset: _sheetSlide.value + const Offset(0, -52),
+                              child: child,
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Animated Centered Logo nested nicely inside the curve
+                                Center(
+                                  child: AnimatedBuilder(
+                                    animation: _animController,
+                                    builder: (context, child) => Opacity(
+                                      opacity: _logoFade.value,
+                                      child: Transform.scale(
+                                        scale: _logoScale.value,
+                                        child: child,
                                       ),
-                              ),
-                              const SizedBox(height: 20),
-                              SrPrimaryButton(
-                                label: 'Sign in',
-                                icon: Icons.arrow_forward_rounded,
-                                busy: _busy,
-                                onPressed: _busy ? null : _submit,
-                              ),
-                              const SizedBox(height: 4),
-                              Center(
-                                child: TextButton(
-                                  onPressed: _busy ? null : () => Navigator.of(context).push(srFadeRoute(const ForgotPasswordScreen())),
-                                  child: const Text('Forgot password?'),
-                                ),
-                              ),
-                              const _OrDivider(),
-                              const SizedBox(height: 12),
-                              OutlinedButton.icon(
-                                icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
-                                label: const Text('New parent? Sign up'),
-                                onPressed: _busy ? null : () => Navigator.of(context).push(srFadeRoute(const ParentRegisterScreen())),
-                              ),
-                              if (kDebugMode) ...[
-                                const SizedBox(height: 14),
-                                Text('API: ${Env.apiBaseUrl}', textAlign: TextAlign.center, style: theme.textTheme.labelSmall),
-                                if (Env.apiBaseUrl.contains('10.0.2.2'))
-                                  Text(
-                                    'On a physical phone, set API_BASE_URL to your PC IP in env/dev.json',
-                                    textAlign: TextAlign.center,
-                                    style: theme.textTheme.labelSmall?.copyWith(color: AppColors.onTint(AppColors.amber)),
+                                    ),
+                                    child: const Padding(
+                                      padding: EdgeInsets.only(top: 0, bottom: 8),
+                                      child: EthiyoLogo(width: 175),
+                                    ),
                                   ),
+                                ),
+
+                                SrFadeIn(
+                                  delay: const Duration(milliseconds: 60),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Welcome back',
+                                        style: theme.textTheme.headlineSmall?.copyWith(
+                                          color: AppColors.brandDeep,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      const Text(
+                                        'Sign in to your account',
+                                        style: TextStyle(color: AppColors.slate, fontSize: 14),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 18),
+                                if (sessionMessage != null && _error == null)
+                                  _Banner(message: sessionMessage, color: AppColors.amber, icon: Icons.info_outline_rounded),
+                                TextFormField(
+                                  controller: _email,
+                                  keyboardType: TextInputType.emailAddress,
+                                  autofillHints: const [AutofillHints.email, AutofillHints.username],
+                                  textInputAction: TextInputAction.next,
+                                  decoration: const InputDecoration(labelText: 'Email address', prefixIcon: Icon(Icons.mail_outline_rounded)),
+                                  validator: (v) => (v == null || !v.contains('@')) ? 'Enter your email' : null,
+                                ),
+                                const SizedBox(height: 14),
+                                TextFormField(
+                                  controller: _password,
+                                  obscureText: _obscure,
+                                  autofillHints: const [AutofillHints.password],
+                                  textInputAction: TextInputAction.done,
+                                  onFieldSubmitted: (_) => _submit(),
+                                  decoration: InputDecoration(
+                                    labelText: 'Password',
+                                    prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                    suffixIcon: IconButton(
+                                      tooltip: _obscure ? 'Show password' : 'Hide password',
+                                      icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                                      onPressed: () => setState(() => _obscure = !_obscure),
+                                    ),
+                                  ),
+                                  validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
+                                ),
+                                AnimatedSize(
+                                  duration: SrMotion.of(context, SrMotion.base),
+                                  curve: SrMotion.curve,
+                                  alignment: Alignment.topCenter,
+                                  child: _error == null
+                                      ? const SizedBox(width: double.infinity)
+                                      : Padding(
+                                          padding: const EdgeInsets.only(top: 14),
+                                          child: _Banner(message: _error!, color: AppColors.red, icon: Icons.error_outline_rounded),
+                                        ),
+                                ),
+                                const SizedBox(height: 18),
+                                SrPrimaryButton(
+                                  label: 'Sign in',
+                                  icon: Icons.arrow_forward_rounded,
+                                  busy: _busy,
+                                  onPressed: _busy ? null : _submit,
+                                ),
+                                const SizedBox(height: 4),
+                                Center(
+                                  child: TextButton(
+                                    onPressed: _busy ? null : () => Navigator.of(context).push(srFadeRoute(const ForgotPasswordScreen())),
+                                    child: const Text('Forgot password?'),
+                                  ),
+                                ),
+                                const _OrDivider(),
+                                const SizedBox(height: 12),
+                                OutlinedButton.icon(
+                                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                                  label: const Text('New parent? Sign up'),
+                                  onPressed: _busy ? null : () => Navigator.of(context).push(srFadeRoute(const ParentRegisterScreen())),
+                                ),
+                                if (kDebugMode) ...[
+                                  const SizedBox(height: 14),
+                                  Text('API: ${Env.apiBaseUrl}', textAlign: TextAlign.center, style: theme.textTheme.labelSmall),
+                                  if (Env.apiBaseUrl.contains('10.0.2.2'))
+                                    Text(
+                                      'On a physical phone, set API_BASE_URL to your PC IP in env/dev.json',
+                                      textAlign: TextAlign.center,
+                                      style: theme.textTheme.labelSmall?.copyWith(color: AppColors.onTint(AppColors.amber)),
+                                    ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
                         ),
                       ],
