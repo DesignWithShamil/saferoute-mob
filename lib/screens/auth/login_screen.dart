@@ -152,19 +152,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           ),
                           child: const SrAuthHero(
                             showLogo: false,
-                            compact: true,
+                            heroHeight: 255.0,
                             title: '',
                             subtitle: '',
                           ),
                         ),
 
-                        // Form sheet with entrance animation & pulled up to remove empty white space
+                        // Form sheet with entrance animation & balanced spacing
                         AnimatedBuilder(
                           animation: _animController,
                           builder: (context, child) => Opacity(
                             opacity: _sheetFade.value,
                             child: Transform.translate(
-                              offset: _sheetSlide.value + const Offset(0, -52),
+                              offset: _sheetSlide.value + const Offset(0, -28),
                               child: child,
                             ),
                           ),
@@ -173,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                // Animated Centered Logo nested nicely inside the curve
+                                // Animated Centered Logo nested nicely inside the curve with small breathing space
                                 Center(
                                   child: AnimatedBuilder(
                                     animation: _animController,
@@ -185,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       ),
                                     ),
                                     child: const Padding(
-                                      padding: EdgeInsets.only(top: 0, bottom: 8),
+                                      padding: EdgeInsets.only(top: 8, bottom: 8),
                                       child: EthiyoLogo(width: 175),
                                     ),
                                   ),

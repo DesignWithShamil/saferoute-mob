@@ -125,6 +125,7 @@ class SrAuthHero extends StatelessWidget {
     this.showFeatures = true,
     this.onBack,
     this.showLogo = false,
+    this.heroHeight,
   });
 
   final String title;
@@ -136,11 +137,12 @@ class SrAuthHero extends StatelessWidget {
   final bool showFeatures;
   final VoidCallback? onBack;
   final bool showLogo;
+  final double? heroHeight;
 
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
-    final minHeight = (showLogo ? (subtitle.trim().isEmpty ? 220.0 : 310.0) : (compact ? 220.0 : 300.0)) + top;
+    final minHeight = (heroHeight ?? (showLogo ? (subtitle.trim().isEmpty ? 220.0 : 310.0) : (compact ? 220.0 : 300.0))) + top;
     return ClipPath(
       clipper: _SheetClipper(),
       child: Stack(
