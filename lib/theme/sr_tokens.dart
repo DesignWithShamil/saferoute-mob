@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+export 'sr_responsive.dart';
+
 /// Ethiyo design tokens. Spacing, radii, sizes and motion live here so that
 /// screens never invent one-off values. Colours live in `AppColors`
 /// (widgets/state_views.dart) and text styles in `SafeRouteTheme`.

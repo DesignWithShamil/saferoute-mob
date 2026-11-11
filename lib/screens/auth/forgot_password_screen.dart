@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_controller.dart';
+import '../../theme/sr_tokens.dart';
 import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 
@@ -117,6 +118,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             : 'We will email a one-time verification code to reset your password.');
     final heroIcon = _step == 3 ? Icons.check_circle_rounded : (_step == 2 ? Icons.password_rounded : Icons.lock_reset_rounded);
 
+    final r = context.responsive;
+    final hPadding = r.horizontalGutter;
+
     return Scaffold(
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: const SystemUiOverlayStyle(
@@ -128,7 +132,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: Align(
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
+              constraints: BoxConstraints(maxWidth: r.maxFormWidth),
               child: SingleChildScrollView(
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 24),
@@ -146,7 +150,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       onBack: _busy ? null : () => Navigator.of(context).pop(),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+                      padding: EdgeInsets.fromLTRB(hPadding, 22, hPadding, 0),
                       child: SrFadeIn(
                         delay: const Duration(milliseconds: 200),
                         child: AnimatedSwitcher(

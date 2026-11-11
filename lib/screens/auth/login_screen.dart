@@ -114,8 +114,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     final sessionMessage = context.select<AuthController, String?>((a) => a.message);
     final theme = Theme.of(context);
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    final heroHeight = (screenHeight * 0.36).clamp(250.0, 350.0);
+    final r = context.responsive;
+    final heroHeight = r.authHeroHeight;
+    final logoWidth = r.authLogoWidth;
+    final hPadding = r.horizontalGutter;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -130,156 +133,177 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           child: Align(
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: SingleChildScrollView(
-                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 16),
-                child: Form(
-                  key: _form,
-                  child: AutofillGroup(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Animated Hero scene at top
-                        AnimatedBuilder(
-                          animation: _animController,
-                          builder: (context, child) => Opacity(
-                            opacity: _heroFade.value,
-                            child: Transform.scale(
-                              scale: _heroScale.value,
-                              child: child,
-                            ),
-                          ),
-                          child: SrAuthHero(
-                            showLogo: false,
-                            heroHeight: heroHeight,
-                            title: '',
-                            subtitle: '',
-                          ),
-                        ),
-
-                        // Form sheet with entrance animation & balanced spacing
-                        AnimatedBuilder(
-                          animation: _animController,
-                          builder: (context, child) => Opacity(
-                            opacity: _sheetFade.value,
-                            child: Transform.translate(
-                              offset: _sheetSlide.value + const Offset(0, -28),
-                              child: child,
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+              constraints: BoxConstraints(maxWidth: r.maxFormWidth),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.only(bottom: bottomInset + 16),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: (constraints.maxHeight - (bottomInset + 16)).clamp(0.0, double.infinity),
+                      ),
+                      child: IntrinsicHeight(
+                        child: Form(
+                          key: _form,
+                          child: AutofillGroup(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                // Animated Centered Logo nested nicely inside the curve with small breathing space
-                                Center(
-                                  child: AnimatedBuilder(
-                                    animation: _animController,
-                                    builder: (context, child) => Opacity(
-                                      opacity: _logoFade.value,
-                                      child: Transform.scale(
-                                        scale: _logoScale.value,
-                                        child: child,
-                                      ),
+                                // Animated Hero scene at top
+                                AnimatedBuilder(
+                                  animation: _animController,
+                                  builder: (context, child) => Opacity(
+                                    opacity: _heroFade.value,
+                                    child: Transform.scale(
+                                      scale: _heroScale.value,
+                                      child: child,
                                     ),
-                                    child: const Padding(
-                                      padding: EdgeInsets.only(top: 8, bottom: 8),
-                                      child: EthiyoLogo(width: 175),
-                                    ),
+                                  ),
+                                  child: SrAuthHero(
+                                    showLogo: false,
+                                    heroHeight: heroHeight,
+                                    title: '',
+                                    subtitle: '',
                                   ),
                                 ),
 
-                                SrFadeIn(
-                                  delay: const Duration(milliseconds: 60),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        'Welcome back',
-                                        style: theme.textTheme.headlineSmall?.copyWith(
-                                          color: AppColors.brandDeep,
-                                          fontWeight: FontWeight.w800,
-                                        ),
+                                // Form sheet with entrance animation & balanced responsive spacing
+                                Expanded(
+                                  child: AnimatedBuilder(
+                                    animation: _animController,
+                                    builder: (context, child) => Opacity(
+                                      opacity: _sheetFade.value,
+                                      child: Transform.translate(
+                                        offset: _sheetSlide.value + const Offset(0, -28),
+                                        child: child,
                                       ),
-                                      const SizedBox(height: 3),
-                                      const Text(
-                                        'Sign in to your account',
-                                        style: TextStyle(color: AppColors.slate, fontSize: 14),
+                                    ),
+                                    child: Padding(
+                                      padding: EdgeInsets.fromLTRB(hPadding, 0, hPadding, 10),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: [
+                                          // Animated Centered Logo nested nicely inside the curve with small breathing space
+                                          Center(
+                                            child: AnimatedBuilder(
+                                              animation: _animController,
+                                              builder: (context, child) => Opacity(
+                                                opacity: _logoFade.value,
+                                                child: Transform.scale(
+                                                  scale: _logoScale.value,
+                                                  child: child,
+                                                ),
+                                              ),
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(top: 6, bottom: 8),
+                                                child: EthiyoLogo(width: logoWidth),
+                                              ),
+                                            ),
+                                          ),
+
+                                          SrFadeIn(
+                                            delay: const Duration(milliseconds: 60),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  'Welcome back',
+                                                  style: (r.isCompactWidth
+                                                          ? theme.textTheme.titleLarge
+                                                          : theme.textTheme.headlineSmall)
+                                                      ?.copyWith(
+                                                    color: AppColors.brandDeep,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 3),
+                                                Text(
+                                                  'Sign in to your account',
+                                                  style: TextStyle(
+                                                    color: AppColors.slate,
+                                                    fontSize: r.isCompactWidth ? 13 : 14,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          SizedBox(height: r.isShortScreen ? 12 : 18),
+                                          if (sessionMessage != null && _error == null)
+                                            _Banner(message: sessionMessage, color: AppColors.amber, icon: Icons.info_outline_rounded),
+                                          TextFormField(
+                                            controller: _email,
+                                            keyboardType: TextInputType.emailAddress,
+                                            autofillHints: const [AutofillHints.email, AutofillHints.username],
+                                            textInputAction: TextInputAction.next,
+                                            decoration: const InputDecoration(labelText: 'Email address', prefixIcon: Icon(Icons.mail_outline_rounded)),
+                                            validator: (v) => (v == null || !v.contains('@')) ? 'Enter your email' : null,
+                                          ),
+                                          SizedBox(height: r.isShortScreen ? 10 : 14),
+                                          TextFormField(
+                                            controller: _password,
+                                            obscureText: _obscure,
+                                            autofillHints: const [AutofillHints.password],
+                                            textInputAction: TextInputAction.done,
+                                            onFieldSubmitted: (_) => _submit(),
+                                            decoration: InputDecoration(
+                                              labelText: 'Password',
+                                              prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                              suffixIcon: IconButton(
+                                                tooltip: _obscure ? 'Show password' : 'Hide password',
+                                                icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                                                onPressed: () => setState(() => _obscure = !_obscure),
+                                              ),
+                                            ),
+                                            validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
+                                          ),
+                                          AnimatedSize(
+                                            duration: SrMotion.of(context, SrMotion.base),
+                                            curve: SrMotion.curve,
+                                            alignment: Alignment.topCenter,
+                                            child: _error == null
+                                                ? const SizedBox(width: double.infinity)
+                                                : Padding(
+                                                    padding: const EdgeInsets.only(top: 12),
+                                                    child: _Banner(message: _error!, color: AppColors.red, icon: Icons.error_outline_rounded),
+                                                  ),
+                                          ),
+                                          SizedBox(height: r.isShortScreen ? 14 : 18),
+                                          SrPrimaryButton(
+                                            label: 'Sign in',
+                                            icon: Icons.arrow_forward_rounded,
+                                            busy: _busy,
+                                            onPressed: _busy ? null : _submit,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Center(
+                                            child: TextButton(
+                                              onPressed: _busy ? null : () => Navigator.of(context).push(srFadeRoute(const ForgotPasswordScreen())),
+                                              child: const Text('Forgot password?'),
+                                            ),
+                                          ),
+                                          if (r.isTallScreen) const Spacer(),
+                                          const _OrDivider(),
+                                          SizedBox(height: r.isShortScreen ? 8 : 12),
+                                          OutlinedButton.icon(
+                                            icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                                            label: const Text('New parent? Sign up'),
+                                            onPressed: _busy ? null : () => Navigator.of(context).push(srFadeRoute(const ParentRegisterScreen())),
+                                          ),
+                                          if (r.isTallScreen) const SizedBox(height: 6),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                if (sessionMessage != null && _error == null)
-                                  _Banner(message: sessionMessage, color: AppColors.amber, icon: Icons.info_outline_rounded),
-                                TextFormField(
-                                  controller: _email,
-                                  keyboardType: TextInputType.emailAddress,
-                                  autofillHints: const [AutofillHints.email, AutofillHints.username],
-                                  textInputAction: TextInputAction.next,
-                                  decoration: const InputDecoration(labelText: 'Email address', prefixIcon: Icon(Icons.mail_outline_rounded)),
-                                  validator: (v) => (v == null || !v.contains('@')) ? 'Enter your email' : null,
-                                ),
-                                const SizedBox(height: 14),
-                                TextFormField(
-                                  controller: _password,
-                                  obscureText: _obscure,
-                                  autofillHints: const [AutofillHints.password],
-                                  textInputAction: TextInputAction.done,
-                                  onFieldSubmitted: (_) => _submit(),
-                                  decoration: InputDecoration(
-                                    labelText: 'Password',
-                                    prefixIcon: const Icon(Icons.lock_outline_rounded),
-                                    suffixIcon: IconButton(
-                                      tooltip: _obscure ? 'Show password' : 'Hide password',
-                                      icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                                      onPressed: () => setState(() => _obscure = !_obscure),
                                     ),
                                   ),
-                                  validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
-                                ),
-                                AnimatedSize(
-                                  duration: SrMotion.of(context, SrMotion.base),
-                                  curve: SrMotion.curve,
-                                  alignment: Alignment.topCenter,
-                                  child: _error == null
-                                      ? const SizedBox(width: double.infinity)
-                                      : Padding(
-                                          padding: const EdgeInsets.only(top: 14),
-                                          child: _Banner(message: _error!, color: AppColors.red, icon: Icons.error_outline_rounded),
-                                        ),
-                                ),
-                                const SizedBox(height: 18),
-                                SrPrimaryButton(
-                                  label: 'Sign in',
-                                  icon: Icons.arrow_forward_rounded,
-                                  busy: _busy,
-                                  onPressed: _busy ? null : _submit,
-                                ),
-                                const SizedBox(height: 4),
-                                Center(
-                                  child: TextButton(
-                                    onPressed: _busy ? null : () => Navigator.of(context).push(srFadeRoute(const ForgotPasswordScreen())),
-                                    child: const Text('Forgot password?'),
-                                  ),
-                                ),
-                                const _OrDivider(),
-                                const SizedBox(height: 12),
-                                OutlinedButton.icon(
-                                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
-                                  label: const Text('New parent? Sign up'),
-                                  onPressed: _busy ? null : () => Navigator.of(context).push(srFadeRoute(const ParentRegisterScreen())),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
           ),

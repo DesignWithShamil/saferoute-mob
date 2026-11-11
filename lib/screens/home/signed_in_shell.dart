@@ -321,23 +321,26 @@ class _DockBar extends StatelessWidget {
     final gap = hasMore ? _gap : 0.0;
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-        child: SizedBox(
-          height: _bar + (hasMore ? _lift : 0),
-          child: LayoutBuilder(
-            builder: (context, box) {
-              const pad = 6.0;
-              final itemW = (box.maxWidth - pad * 2 - gap) / tabs.length;
-              double xOf(int i) => pad + itemW * i + (i >= half ? gap : 0);
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: _bar,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 580),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: SizedBox(
+              height: _bar + (hasMore ? _lift : 0),
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  const pad = 6.0;
+                  final itemW = (box.maxWidth - pad * 2 - gap) / tabs.length;
+                  double xOf(int i) => pad + itemW * i + (i >= half ? gap : 0);
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: _bar,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: const Color(0xFF0F172A),
@@ -411,7 +414,9 @@ class _DockBar extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }
 

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_controller.dart';
+import '../../theme/sr_tokens.dart';
 import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 
@@ -92,6 +93,9 @@ class _ParentRegisterScreenState extends State<ParentRegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final r = context.responsive;
+    final hPadding = r.horizontalGutter;
+
     return Scaffold(
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: const SystemUiOverlayStyle(
@@ -103,7 +107,7 @@ class _ParentRegisterScreenState extends State<ParentRegisterScreen> {
           child: Align(
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
+              constraints: BoxConstraints(maxWidth: r.maxFormWidth),
               child: SingleChildScrollView(
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 24),
@@ -121,7 +125,7 @@ class _ParentRegisterScreenState extends State<ParentRegisterScreen> {
                       onBack: _busy ? null : () => Navigator.of(context).pop(),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                      padding: EdgeInsets.fromLTRB(hPadding, 20, hPadding, 0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [

@@ -349,7 +349,10 @@ class _UserTutorialScreenState extends State<UserTutorialScreen> {
           statusBarBrightness: Brightness.light,
         ),
         child: SafeArea(
-          child: Column(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 580),
+              child: Column(
             children: [
               // Top Bar with Logo & Skip Action
               Padding(
@@ -546,7 +549,9 @@ class _UserTutorialScreenState extends State<UserTutorialScreen> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../theme/sr_tokens.dart';
 import '../../widgets/ethiyo_brand.dart';
 import '../../widgets/state_views.dart';
 
@@ -114,6 +115,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
   @override
   Widget build(BuildContext context) {
     final insets = MediaQuery.paddingOf(context);
+    final r = context.responsive;
+    final logoWidth = r.welcomeLogoWidth;
+    final topOffset = insets.top + (r.isShortScreen ? 20.0 : (r.isTallScreen ? 56.0 : 42.0));
 
     return Scaffold(
       backgroundColor: AppColors.brandDeep,
@@ -125,7 +129,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
         ),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
+            constraints: BoxConstraints(maxWidth: r.maxFormWidth + 40),
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -160,9 +164,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
 
                 // 2. Animated Floating Logo entrance
                 Positioned(
-                  top: insets.top + 50,
-                  left: 24,
-                  right: 24,
+                  top: topOffset,
+                  left: 20,
+                  right: 20,
                   child: AnimatedBuilder(
                     animation: _entranceController,
                     builder: (context, child) {
@@ -177,8 +181,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
                         ),
                       );
                     },
-                    child: const Center(
-                      child: EthiyoLogo(width: 240),
+                    child: Center(
+                      child: EthiyoLogo(width: logoWidth),
                     ),
                   ),
                 ),
@@ -243,41 +247,49 @@ class _AnimatedBottomSheet extends StatelessWidget {
   final VoidCallback onContinue;
 
   @override
-  Widget build(BuildContext context) => ClipPath(
-        clipper: _SheetTopClipper(),
-        child: Container(
-          color: Colors.white,
-          padding: EdgeInsets.fromLTRB(28, 44, 24, bottomInset + 24),
-          child: Row(
-            children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'For parents, drivers & helpers',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.slate,
-                      ),
+  Widget build(BuildContext context) {
+    final r = context.responsive;
+    final isCompact = r.isCompactWidth;
+    return ClipPath(
+      clipper: _SheetTopClipper(),
+      child: Container(
+        color: Colors.white,
+        padding: EdgeInsets.fromLTRB(
+          isCompact ? 20 : 28,
+          r.isShortScreen ? 34 : 44,
+          isCompact ? 16 : 24,
+          bottomInset + (r.isShortScreen ? 16 : 24),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'For parents, drivers & helpers',
+                    style: TextStyle(
+                      fontSize: isCompact ? 12 : 13.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.slate,
                     ),
-                    SizedBox(height: 5),
-                    Text(
-                      'Live tracking · Safe pickup · Instant alerts',
-                      style: TextStyle(
-                        fontSize: 16,
-                        height: 1.3,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.brandDeep,
-                        letterSpacing: -0.2,
-                      ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Live tracking · Safe pickup · Instant alerts',
+                    style: TextStyle(
+                      fontSize: isCompact ? 14.5 : 16,
+                      height: 1.3,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.brandDeep,
+                      letterSpacing: -0.2,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
+            ),
+            const SizedBox(width: 14),
 
               // Animated Pulsing Next Button
               AnimatedBuilder(
@@ -328,4 +340,5 @@ class _AnimatedBottomSheet extends StatelessWidget {
           ),
         ),
       );
+  }
 }
