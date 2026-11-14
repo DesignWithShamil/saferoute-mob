@@ -303,8 +303,8 @@ class _RosterRow extends StatelessWidget {
                       radius: 20,
                       backgroundColor: statusColor.withValues(alpha: 0.14),
                       foregroundColor: statusColor,
-                      backgroundImage: student.photo.isNotEmpty ? NetworkImage(student.photo) : null,
-                      child: student.photo.isEmpty ? Text(initial, style: const TextStyle(fontWeight: FontWeight.w800)) : null,
+                      backgroundImage: (student.photo != null && student.photo!.isNotEmpty) ? NetworkImage(student.photo!) : null,
+                      child: (student.photo == null || student.photo!.isEmpty) ? Text(initial, style: const TextStyle(fontWeight: FontWeight.w800)) : null,
                     ),
                     const SizedBox(width: 12),
                     Expanded(

@@ -506,7 +506,7 @@ class _NotificationTile extends StatelessWidget {
       final parent = context.read<ParentController>();
       if (parent.children.length == 1) {
         displayStudent = parent.children.first.student.fullName;
-        displaySchool ??= parent.children.first.student.schoolName;
+        displaySchool ??= parent.children.first.school.name;
       }
     }
 

@@ -251,11 +251,11 @@ class _StudentsRosterScreenState extends State<StudentsRosterScreen> {
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _RosterRowCard(
-                  leading: filtered[i].photo.isNotEmpty
+                  leading: (filtered[i].photo != null && filtered[i].photo!.isNotEmpty)
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(14),
                           child: Image.network(
-                            filtered[i].photo,
+                            filtered[i].photo!,
                             width: 44,
                             height: 44,
                             fit: BoxFit.cover,

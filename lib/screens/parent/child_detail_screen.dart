@@ -122,8 +122,8 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
                     CircleAvatar(
                       radius: 30,
                       backgroundColor: AppColors.brand.withValues(alpha: 0.12),
-                      backgroundImage: s.photo.isNotEmpty ? NetworkImage(s.photo) : null,
-                      child: s.photo.isEmpty
+                      backgroundImage: (s.photo != null && s.photo!.isNotEmpty) ? NetworkImage(s.photo!) : null,
+                      child: (s.photo == null || s.photo!.isEmpty)
                           ? Text(
                               s.fullName.isEmpty ? '?' : s.fullName.characters.first.toUpperCase(),
                               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.brand),

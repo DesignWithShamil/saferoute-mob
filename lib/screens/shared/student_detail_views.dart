@@ -30,14 +30,14 @@ class StudentHeaderCard extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: [AppColors.brand, AppColors.brandDeep],
               ),
-              image: student.photo.isNotEmpty
+              image: (student.photo != null && student.photo!.isNotEmpty)
                   ? DecorationImage(
-                      image: NetworkImage(student.photo),
+                      image: NetworkImage(student.photo!),
                       fit: BoxFit.cover,
                     )
                   : null,
             ),
-            child: student.photo.isEmpty
+            child: (student.photo == null || student.photo!.isEmpty)
                 ? Text(
                     student.fullName.isNotEmpty ? student.fullName.characters.first.toUpperCase() : '?',
                     style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white),
