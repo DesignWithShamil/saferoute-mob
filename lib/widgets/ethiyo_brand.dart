@@ -59,19 +59,11 @@ class EthiyoLogo extends StatelessWidget {
       );
 }
 
-/// Logo on a soft white card, so it stays legible over the photographic hero.
+/// Logo display widget without background card: transparent background with full logo.
 class EthiyoLogoCard extends StatelessWidget {
   const EthiyoLogoCard({super.key, this.width = 168});
   final double width;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(26),
-          boxShadow: [BoxShadow(color: const Color(0xFF0B2A5B).withValues(alpha: 0.22), blurRadius: 24, offset: const Offset(0, 10))],
-        ),
-        child: EthiyoLogo(width: width),
-      );
+  Widget build(BuildContext context) => EthiyoLogo(width: width);
 }

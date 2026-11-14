@@ -148,21 +148,21 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
                   child: const EthiyoHeroImage(alignment: Alignment.center, cacheWidth: 1100),
                 ),
 
-                // Top gradient scrim
+                // Top subtle gradient scrim
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.center,
                       colors: [
-                        AppColors.brandDeep.withValues(alpha: 0.50),
+                        AppColors.brandDeep.withValues(alpha: 0.15),
                         AppColors.brandDeep.withValues(alpha: 0),
                       ],
                     ),
                   ),
                 ),
 
-                // 2. Animated Floating Logo entrance
+                // 2. Animated Floating Logo entrance (transparent background with full wordmark)
                 Positioned(
                   top: topOffset,
                   left: 20,
@@ -182,7 +182,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
                       );
                     },
                     child: Center(
-                      child: EthiyoLogoCard(width: logoWidth),
+                      child: EthiyoLogo(width: logoWidth),
                     ),
                   ),
                 ),
