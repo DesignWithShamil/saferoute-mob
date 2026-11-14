@@ -30,11 +30,19 @@ class StudentHeaderCard extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: [AppColors.brand, AppColors.brandDeep],
               ),
+              image: student.photo.isNotEmpty
+                  ? DecorationImage(
+                      image: NetworkImage(student.photo),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
-            child: Text(
-              student.fullName.isNotEmpty ? student.fullName.characters.first.toUpperCase() : '?',
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white),
-            ),
+            child: student.photo.isEmpty
+                ? Text(
+                    student.fullName.isNotEmpty ? student.fullName.characters.first.toUpperCase() : '?',
+                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white),
+                  )
+                : null,
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -51,7 +59,7 @@ class StudentHeaderCard extends StatelessWidget {
                 Text(
                   [
                     if (age != null) 'Age $age',
-                    if (student.classLabel.isNotEmpty) 'Class ${student.classLabel}',
+                    if (student.displayClass.isNotEmpty) student.displayClass,
                     if (student.admissionNumber.isNotEmpty) student.admissionNumber,
                     if (student.status.isNotEmpty) student.status,
                   ].join(' · '),

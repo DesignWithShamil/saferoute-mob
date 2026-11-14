@@ -88,7 +88,13 @@ class Student {
   final PersonRef? assignedHelper;
   final String medicalInfo;
 
-  String get classLabel => section.isEmpty ? className : '$className-$section';
+  String get classLabel {
+    final clean = className.replaceFirst(RegExp(r'^class\s+', caseSensitive: false), '').trim();
+    if (clean.isEmpty) return section;
+    return section.isEmpty ? clean : '$clean-$section';
+  }
+
+  String get displayClass => classLabel.isEmpty ? '' : 'Class $classLabel';
 
   factory Student.fromJson(Map<String, dynamic> json) => Student(
         publicId: asString(json['public_id']) ?? '',
@@ -263,7 +269,13 @@ class ChildLinkPreview {
   final String section;
   final bool alreadyLinked;
 
-  String get classLabel => section.isEmpty ? className : '$className-$section';
+  String get classLabel {
+    final clean = className.replaceFirst(RegExp(r'^class\s+', caseSensitive: false), '').trim();
+    if (clean.isEmpty) return section;
+    return section.isEmpty ? clean : '$clean-$section';
+  }
+
+  String get displayClass => classLabel.isEmpty ? '' : 'Class $classLabel';
 
   factory ChildLinkPreview.fromJson(Map<String, dynamic> json) {
     final student = asMap(json['student']);

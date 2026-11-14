@@ -251,14 +251,28 @@ class _StudentsRosterScreenState extends State<StudentsRosterScreen> {
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _RosterRowCard(
-                  leading: Text(
-                    (filtered[i].fullName.characters.firstOrNull ?? '?').toUpperCase(),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17),
-                  ),
+                  leading: filtered[i].photo.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Image.network(
+                            filtered[i].photo,
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Text(
+                              (filtered[i].fullName.characters.firstOrNull ?? '?').toUpperCase(),
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17),
+                            ),
+                          ),
+                        )
+                      : Text(
+                          (filtered[i].fullName.characters.firstOrNull ?? '?').toUpperCase(),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17),
+                        ),
                   title: filtered[i].fullName,
                   lines: [
                     [
-                      if (filtered[i].classLabel.isNotEmpty) 'Class ${filtered[i].classLabel}',
+                      if (filtered[i].displayClass.isNotEmpty) filtered[i].displayClass,
                       if (filtered[i].pickupBus != null) 'Bus ${filtered[i].pickupBus!.busNumber}',
                     ].join(' · '),
                     if (filtered[i].pickupStop != null) filtered[i].pickupStop!.name,

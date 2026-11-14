@@ -28,6 +28,7 @@ class MapStop {
     this.radiusMeters,
     this.badge,
     this.details = const [],
+    this.avatarUrl,
   });
 
   final LatLng position;
@@ -50,6 +51,9 @@ class MapStop {
 
   /// Lines shown in the sheet when the marker is tapped.
   final List<String> details;
+
+  /// Child photo for instant visual stop identification
+  final String? avatarUrl;
 }
 
 enum MapPlaceKind { school, pickup, drop }
@@ -297,8 +301,8 @@ class _TripMapState extends State<TripMap> {
                   for (final s in widget.stops)
                     Marker(
                       point: s.position,
-                      width: 34,
-                      height: 34,
+                      width: s.isHighlighted ? 42 : 34,
+                      height: s.isHighlighted ? 42 : 34,
                       child: GestureDetector(
                         onTap: () => _showDetails(
                           Icons.place,
@@ -453,6 +457,26 @@ class _StopMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (stop.isHighlighted && stop.avatarUrl != null && stop.avatarUrl!.isNotEmpty) {
+      return Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.purple, width: 3.5),
+          boxShadow: const [BoxShadow(blurRadius: 6, color: Colors.black38, offset: Offset(0, 2))],
+        ),
+        child: ClipOval(
+          child: Image.network(
+            stop.avatarUrl!,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildBadge(context),
+          ),
+        ),
+      );
+    }
+    return _buildBadge(context);
+  }
+
+  Widget _buildBadge(BuildContext context) {
     final departed = stop.status == TripStopStatus.departed;
     final school = stop.isSchoolAnchor;
     final Color fill = school

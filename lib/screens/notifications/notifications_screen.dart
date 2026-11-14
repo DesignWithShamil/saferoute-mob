@@ -116,126 +116,125 @@ class _NotificationsListState extends State<NotificationsList> {
     final c = context.watch<NotificationsController>();
     final parent = context.watch<ParentController>();
 
-    // 1. Student Names Selecting Option Bar (shows all children + All children)
-    final studentSelectorBar = parent.children.isEmpty
-        ? null
-        : Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  ChoiceChip(
-                    avatar: const Icon(Icons.people_outline, size: 16),
-                    label: const Text('All children'),
-                    selected: c.showAllChildren,
-                    selectedColor: AppColors.brand,
-                    labelStyle: TextStyle(
-                      color: c.showAllChildren ? Colors.white : AppColors.ink,
-                      fontWeight: c.showAllChildren ? FontWeight.w600 : FontWeight.w500,
-                      fontSize: 12,
-                    ),
-                    onSelected: (_) => c.setShowAllChildren(true),
-                  ),
-                  const SizedBox(width: 8),
-                  for (final child in parent.children) ...[
-                    ChoiceChip(
-                      avatar: const Icon(Icons.person_outline, size: 16),
-                      label: Text(child.student.fullName),
-                      selected: !c.showAllChildren && c.studentFilter == child.student.publicId,
-                      selectedColor: AppColors.brand,
-                      labelStyle: TextStyle(
-                        color: (!c.showAllChildren && c.studentFilter == child.student.publicId)
-                            ? Colors.white
-                            : AppColors.ink,
-                        fontWeight: (!c.showAllChildren && c.studentFilter == child.student.publicId)
-                            ? FontWeight.w600
-                            : FontWeight.w500,
-                        fontSize: 12,
-                      ),
-                      onSelected: (_) {
-                        c.filterByChild(child.student.publicId);
-                        parent.selectChild(child.student.publicId);
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                ],
-              ),
-            ),
-          );
-
-    // 2. Category Tabs (All Notifications / Alerts / Announcements)
-    final typeFilterBar = SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Row(
-        children: [
-          ChoiceChip(
-            label: const Text('All Notifications'),
-            selected: c.categoryFilter == 'ALL',
-            onSelected: (_) => c.setCategoryFilter('ALL'),
-          ),
-          const SizedBox(width: 8),
-          ChoiceChip(
-            label: const Text('🔔 Alerts'),
-            selected: c.categoryFilter == 'ALERTS',
-            onSelected: (_) => c.setCategoryFilter('ALERTS'),
-          ),
-          const SizedBox(width: 8),
-          ChoiceChip(
-            label: const Text('📢 Announcements'),
-            selected: c.categoryFilter == 'ANNOUNCEMENTS',
-            onSelected: (_) => c.setCategoryFilter('ANNOUNCEMENTS'),
-          ),
-        ],
+    // 1. Sleek Top Filter Bar (Children + Segmented Categories + Search)
+    final headerBar = Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
       ),
-    );
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // A. Student Selector Horizontal Strip
+          if (parent.children.isNotEmpty) ...[
+            Builder(
+              builder: (context) {
+                final seenIds = <String>{};
+                final uniqueChildren = parent.children.where((ch) => seenIds.add(ch.student.publicId)).toList();
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _ChildFilterPill(
+                        label: 'All children',
+                        icon: Icons.people_alt_rounded,
+                        selected: c.showAllChildren,
+                        onTap: () => c.setShowAllChildren(true),
+                      ),
+                      for (final child in uniqueChildren) ...[
+                        const SizedBox(width: 8),
+                        _ChildFilterPill(
+                          label: child.student.fullName,
+                          photo: child.student.photo,
+                          selected: !c.showAllChildren && c.studentFilter == child.student.publicId,
+                          onTap: () {
+                            c.filterByChild(child.student.publicId);
+                            parent.selectChild(child.student.publicId);
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
 
-    // 3. Search Bar
-    final searchBar = Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
-      child: SizedBox(
-        height: 38,
-        child: TextField(
-          controller: _searchController,
-          style: const TextStyle(fontSize: 13),
-          decoration: InputDecoration(
-            hintText: 'Search notifications or sender...',
-            hintStyle: const TextStyle(fontSize: 13, color: AppColors.slate),
-            prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.slate),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, size: 16),
+          // B. Apple-style Segmented Category Control
+          Container(
+            height: 38,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                _SegmentPill(
+                  label: 'All Notifications',
+                  selected: c.categoryFilter == 'ALL',
+                  onTap: () => c.setCategoryFilter('ALL'),
+                ),
+                _SegmentPill(
+                  label: '🔔 Alerts',
+                  selected: c.categoryFilter == 'ALERTS',
+                  onTap: () => c.setCategoryFilter('ALERTS'),
+                ),
+                _SegmentPill(
+                  label: '📢 Announcements',
+                  selected: c.categoryFilter == 'ANNOUNCEMENTS',
+                  onTap: () => c.setCategoryFilter('ANNOUNCEMENTS'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // C. Apple-style Search Bar
+          Container(
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                const SizedBox(width: 10),
+                const Icon(Icons.search_rounded, size: 18, color: AppColors.slate),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(fontSize: 13.5, color: AppColors.ink, fontWeight: FontWeight.w500),
+                    decoration: const InputDecoration(
+                      hintText: 'Search notifications or sender...',
+                      hintStyle: TextStyle(fontSize: 13, color: AppColors.slate),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onSubmitted: (val) => c.setSearchQuery(val.trim()),
+                    onChanged: (val) {
+                      setState(() {});
+                      if (val.isEmpty) c.setSearchQuery('');
+                    },
+                  ),
+                ),
+                if (_searchController.text.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.cancel_rounded, size: 16, color: AppColors.slate),
                     onPressed: () {
                       _searchController.clear();
                       c.setSearchQuery('');
                     },
-                  )
-                : null,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.brand),
+                  ),
+              ],
             ),
           ),
-          onSubmitted: (val) => c.setSearchQuery(val.trim()),
-          onChanged: (val) {
-            setState(() {});
-            if (val.isEmpty) c.setSearchQuery('');
-          },
-        ),
+        ],
       ),
     );
 
@@ -252,10 +251,20 @@ class _NotificationsListState extends State<NotificationsList> {
               : 'No notifications yet';
       body = RefreshIndicator(
         onRefresh: c.load,
-        child: ListView(children: [
-          const SizedBox(height: 120),
-          EmptyView(icon: Icons.notifications_none, title: emptyTitle),
-        ]),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: EmptyView(icon: Icons.notifications_none_rounded, title: emptyTitle),
+                ),
+              ),
+            ),
+          ),
+        ),
       );
     } else {
       body = RefreshIndicator(
@@ -266,7 +275,7 @@ class _NotificationsListState extends State<NotificationsList> {
             return false;
           },
           child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             itemCount: c.items.length + (c.hasMore ? 1 : 0),
             separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, i) {
@@ -285,11 +294,142 @@ class _NotificationsListState extends State<NotificationsList> {
 
     return Column(
       children: [
-        ?studentSelectorBar,
-        typeFilterBar,
-        searchBar,
+        headerBar,
         Expanded(child: body),
       ],
+    );
+  }
+}
+
+class _ChildFilterPill extends StatelessWidget {
+  const _ChildFilterPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.icon,
+    this.photo,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final IconData? icon;
+  final String? photo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.brand : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? AppColors.brand : const Color(0xFFE2E8F0),
+              width: 1,
+            ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: AppColors.brand.withValues(alpha: 0.25),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (photo != null && photo!.isNotEmpty) ...[
+                CircleAvatar(
+                  radius: 10,
+                  backgroundImage: NetworkImage(photo!),
+                ),
+                const SizedBox(width: 6),
+              ] else if (icon != null) ...[
+                Icon(icon, size: 14, color: selected ? Colors.white : AppColors.slate),
+                const SizedBox(width: 6),
+              ] else ...[
+                CircleAvatar(
+                  radius: 10,
+                  backgroundColor: selected ? Colors.white.withValues(alpha: 0.25) : AppColors.brand.withValues(alpha: 0.15),
+                  child: Text(
+                    label.isNotEmpty ? label[0].toUpperCase() : '?',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: selected ? Colors.white : AppColors.brand,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  color: selected ? Colors.white : const Color(0xFF334155),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SegmentPill extends StatelessWidget {
+  const _SegmentPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              color: selected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -310,13 +450,14 @@ class _NotificationTile extends StatelessWidget {
 
   bool get _isAnnouncement => item.isAnnouncement;
 
-  String get _cleanTitle {
+  String _getCleanTitle(String? stuName, String? schName) {
     final title = item.title;
     final colonIdx = title.lastIndexOf(': ');
     if (colonIdx != -1 && colonIdx < title.length - 2) {
       final prefix = title.substring(0, colonIdx);
-      if ((item.studentName != null && prefix.contains(item.studentName!)) ||
-          (item.schoolName != null && prefix.contains(item.schoolName!))) {
+      if ((stuName != null && prefix.contains(stuName)) ||
+          (schName != null && prefix.contains(schName)) ||
+          prefix.contains(' - ')) {
         return title.substring(colonIdx + 2);
       }
     }
@@ -344,6 +485,32 @@ class _NotificationTile extends StatelessWidget {
     final emergency = item.type == 'EMERGENCY_ALERT';
     final accent = emergency ? AppColors.red : AppColors.brand;
     final isAnn = _isAnnouncement;
+
+    // Resolve student and school names with robust fallbacks
+    String? displayStudent = item.studentName;
+    String? displaySchool = item.schoolName;
+
+    if (displayStudent == null || displayStudent.isEmpty) {
+      final colonIdx = item.title.indexOf(': ');
+      if (colonIdx > 0) {
+        final prefix = item.title.substring(0, colonIdx);
+        if (prefix.contains(' - ')) {
+          final parts = prefix.split(' - ');
+          displayStudent = parts[0].trim();
+          displaySchool ??= parts[1].trim();
+        }
+      }
+    }
+
+    if (displayStudent == null || displayStudent.isEmpty) {
+      final parent = context.read<ParentController>();
+      if (parent.children.length == 1) {
+        displayStudent = parent.children.first.student.fullName;
+        displaySchool ??= parent.children.first.student.schoolName;
+      }
+    }
+
+    final cleanTitle = _getCleanTitle(displayStudent, displaySchool);
 
     return Container(
       decoration: BoxDecoration(
@@ -388,10 +555,10 @@ class _NotificationTile extends StatelessWidget {
                             const _MetaBadge(label: 'Announcement', icon: Icons.campaign_rounded, color: AppColors.amber)
                           else
                             const _MetaBadge(label: 'Alert', icon: Icons.notifications_active_rounded, color: AppColors.brand),
-                          if (item.schoolName != null && item.schoolName!.isNotEmpty)
-                            _MetaBadge(label: item.schoolName!, icon: Icons.school_rounded, color: AppColors.brandDeep),
-                          if (item.studentName != null && item.studentName!.isNotEmpty)
-                            _MetaBadge(label: item.studentName!, icon: Icons.person_rounded, color: AppColors.green),
+                          if (displaySchool != null && displaySchool.isNotEmpty)
+                            _MetaBadge(label: displaySchool, icon: Icons.school_rounded, color: AppColors.brandDeep),
+                          if (displayStudent != null && displayStudent.isNotEmpty)
+                            _MetaBadge(label: displayStudent, icon: Icons.person_rounded, color: AppColors.green),
                           if (item.data['context'] != null && item.data['context']!.isNotEmpty)
                             _MetaBadge(label: item.data['context']!, icon: Icons.groups_rounded, color: AppColors.slate),
 
@@ -464,7 +631,7 @@ class _NotificationTile extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        _cleanTitle,
+                        cleanTitle,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: unread ? FontWeight.w700 : FontWeight.w600,

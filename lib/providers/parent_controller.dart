@@ -133,6 +133,12 @@ class ParentController extends ChangeNotifier {
     await load();
   }
 
+  /// Updates student profile photo and reloads state across all screens
+  Future<void> updateChildPhoto(String studentId, String photoUrl) async {
+    await _s.transport.uploadStudentPhoto(studentId, photoUrl);
+    await load();
+  }
+
   int _pollUsers = 0;
 
   /// Reference-counted so the home tab and an open live screen share one timer.
@@ -279,6 +285,17 @@ class ParentController extends ChangeNotifier {
     final updated = await _s.transport.cancelChildTemporaryPin(studentId);
     _updateChildPin(studentId, updated);
     return updated;
+  }
+
+  Future<void> unlinkChild(String studentId) async {
+    await _s.transport.unlinkChild(studentId);
+    children = children.where((c) => c.student.publicId != studentId).toList();
+    if (_selectedId == studentId) {
+      _selectedId = children.firstOrNull?.student.publicId;
+      unawaited(_s.storage.setSelectedChildId(_selectedId));
+    }
+    notifyListeners();
+    unawaited(load());
   }
 
   void reset() {

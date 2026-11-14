@@ -6,6 +6,7 @@ import '../../core/config/env.dart';
 import '../../models/user.dart';
 import '../../providers/auth_controller.dart';
 import '../../providers/parent_controller.dart';
+import '../../theme/sr_tokens.dart';
 import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 import '../auth/user_tutorial_screen.dart';
@@ -326,6 +327,67 @@ class _ProfileViewState extends State<ProfileView> {
                           child.student.fullName,
                           if (child.school.contactPhone.isNotEmpty) child.school.contactPhone,
                         ].join(' · '),
+                        trailing: InkWell(
+                          onTap: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                title: const Text('Remove Connected Child?'),
+                                content: Text(
+                                  'Are you sure you want to disconnect ${child.student.fullName} (${child.school.name}) from your account?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop(false),
+                                    child: const Text('No'),
+                                  ),
+                                  FilledButton(
+                                    style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+                                    onPressed: () => Navigator.of(ctx).pop(true),
+                                    child: const Text('Yes, Remove'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirmed == true && context.mounted) {
+                              try {
+                                await parent.unlinkChild(child.student.publicId);
+                                if (context.mounted) {
+                                  showSnack(context, '${child.student.fullName} removed from your account');
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  showSnack(context, 'Failed to disconnect: $e', error: true);
+                                }
+                              }
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: AppColors.red.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppColors.red.withValues(alpha: 0.2)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.link_off_rounded, size: 14, color: AppColors.red),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Remove',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                 ] else if (auth.school != null)
                   _InfoRow(

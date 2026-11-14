@@ -55,6 +55,13 @@ class TransportRepository {
 
   Future<void> unlinkChild(String studentId) => _api.delete(ApiEndpoints.parentChildUnlink(studentId));
 
+  /// Update student profile photo
+  Future<String?> uploadStudentPhoto(String studentId, String photoUrl) async {
+    final res = await _api.post(ApiEndpoints.studentPhoto(studentId), data: {'photo_url': photoUrl});
+    final data = asMap(res);
+    return asString(data['photo_url']);
+  }
+
   /// Child detail with route stops for the parent's route map.
   Future<ParentLink> childDetail(String studentId) async =>
       ParentLink.fromJson(asMap(await _api.get(ApiEndpoints.parentChild(studentId))));

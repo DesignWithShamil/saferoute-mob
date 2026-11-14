@@ -215,13 +215,37 @@ class SelectedChildHeader extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: AppColors.brand,
-                  foregroundColor: Colors.white,
-                  child: Text(
-                    child.student.fullName.characters.firstOrNull?.toUpperCase() ?? '?',
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                GestureDetector(
+                  onTap: () => showStudentPhotoDialog(context, child.student),
+                  child: Tooltip(
+                    message: 'Tap to update student profile photo',
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 25,
+                          backgroundColor: AppColors.brand,
+                          foregroundColor: Colors.white,
+                          backgroundImage: (child.student.photo != null && child.student.photo!.isNotEmpty)
+                              ? NetworkImage(child.student.photo!)
+                              : null,
+                          child: (child.student.photo == null || child.student.photo!.isEmpty)
+                              ? Text(
+                                  child.student.fullName.characters.firstOrNull?.toUpperCase() ?? '?',
+                                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                                )
+                              : null,
+                        ),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(3.5),
+                            decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
+                            child: const Icon(Icons.camera_alt, size: 10, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -240,7 +264,7 @@ class SelectedChildHeader extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         [
-                          if (child.student.classLabel.isNotEmpty) 'Class ${child.student.classLabel}',
+                          if (child.student.classLabel.isNotEmpty) child.student.displayClass,
                           bus == null ? 'No bus assigned' : 'Bus $bus',
                         ].join(' · '),
                         maxLines: 1,
@@ -345,4 +369,112 @@ class _Line extends StatelessWidget {
           ],
         ),
       );
+}
+
+Future<void> showStudentPhotoDialog(BuildContext context, Student student) async {
+  final controller = TextEditingController(text: student.photo ?? '');
+  final presets = [
+    'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&h=200&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&h=200&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&h=200&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200&h=200&fit=crop&crop=faces',
+  ];
+
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      bool saving = false;
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Text('Student Photo: ${student.fullName}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Upload photo URL or select a student portrait for quick identification on maps, driver roster, and attendance:', style: TextStyle(fontSize: 12, color: AppColors.slate)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      labelText: 'Photo Image URL',
+                      hintText: 'https://...',
+                      prefixIcon: Icon(Icons.link),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Preset Student Avatars:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final url in presets)
+                        GestureDetector(
+                          onTap: () {
+                            controller.text = url;
+                            setState(() {});
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: controller.text == url ? AppColors.brand : Colors.transparent,
+                                width: 2.5,
+                              ),
+                            ),
+                            child: CircleAvatar(
+                              radius: 20,
+                              backgroundImage: NetworkImage(url),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: saving ? null : () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: saving
+                    ? null
+                    : () async {
+                        final text = controller.text.trim();
+                        if (text.isEmpty) return;
+                        setState(() => saving = true);
+                        try {
+                          await dialogContext.read<ParentController>().updateChildPhoto(student.publicId, text);
+                          if (dialogContext.mounted) {
+                            Navigator.of(dialogContext).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Profile photo updated successfully!')),
+                            );
+                          }
+                        } catch (e) {
+                          setState(() => saving = false);
+                          if (dialogContext.mounted) {
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              SnackBar(content: Text('Failed to update photo: $e')),
+                            );
+                          }
+                        }
+                      },
+                child: saving
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Save Photo'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
 }

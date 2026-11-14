@@ -273,7 +273,7 @@ class _RosterRow extends StatelessWidget {
     }
 
     final hint = dropLocationHint(record);
-    final details = [if (student.ageYears != null) '${student.ageYears} yrs', student.admissionNumber, student.classLabel]
+    final details = [if (student.ageYears != null) '${student.ageYears} yrs', student.admissionNumber, student.displayClass]
         .where((s) => s.isNotEmpty)
         .join(' · ');
     final showActions = !actionsInDetail && actions.isNotEmpty;
@@ -303,7 +303,8 @@ class _RosterRow extends StatelessWidget {
                       radius: 20,
                       backgroundColor: statusColor.withValues(alpha: 0.14),
                       foregroundColor: statusColor,
-                      child: Text(initial, style: const TextStyle(fontWeight: FontWeight.w800)),
+                      backgroundImage: student.photo.isNotEmpty ? NetworkImage(student.photo) : null,
+                      child: student.photo.isEmpty ? Text(initial, style: const TextStyle(fontWeight: FontWeight.w800)) : null,
                     ),
                     const SizedBox(width: 12),
                     Expanded(

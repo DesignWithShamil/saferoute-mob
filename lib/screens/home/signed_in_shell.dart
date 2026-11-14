@@ -321,7 +321,9 @@ class _DockBar extends StatelessWidget {
     final gap = hasMore ? _gap : 0.0;
     return SafeArea(
       top: false,
-      child: Center(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        heightFactor: 1.0,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 580),
           child: Padding(

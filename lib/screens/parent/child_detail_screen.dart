@@ -122,10 +122,13 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
                     CircleAvatar(
                       radius: 30,
                       backgroundColor: AppColors.brand.withValues(alpha: 0.12),
-                      child: Text(
-                        s.fullName.isEmpty ? '?' : s.fullName.characters.first.toUpperCase(),
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.brand),
-                      ),
+                      backgroundImage: s.photo.isNotEmpty ? NetworkImage(s.photo) : null,
+                      child: s.photo.isEmpty
+                          ? Text(
+                              s.fullName.isEmpty ? '?' : s.fullName.characters.first.toUpperCase(),
+                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.brand),
+                            )
+                          : null,
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -148,7 +151,7 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
                           const SizedBox(height: 2),
                           Text(
                             [
-                              if (s.classLabel.isNotEmpty) 'Class ${s.classLabel}',
+                              if (s.displayClass.isNotEmpty) s.displayClass,
                               if (s.admissionNumber.isNotEmpty) 'Adm. ${s.admissionNumber}',
                               if (link.relation.isNotEmpty) link.relation,
                             ].join(' · '),
