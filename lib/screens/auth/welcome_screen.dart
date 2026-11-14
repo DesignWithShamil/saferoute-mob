@@ -182,7 +182,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
                       );
                     },
                     child: Center(
-                      child: EthiyoLogo(width: logoWidth),
+                      child: EthiyoLogoCard(width: logoWidth),
                     ),
                   ),
                 ),
