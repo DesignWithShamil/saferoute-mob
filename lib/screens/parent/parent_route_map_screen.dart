@@ -94,8 +94,10 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
             name: s.name,
             status: TripStopStatus.pending,
             isHighlighted: s.publicId == highlightId,
+            avatarUrl: s.publicId == highlightId ? student.photo : null,
+            studentName: s.publicId == highlightId ? student.fullName : null,
             details: [
-              if (s.publicId == highlightId) 'Your stop',
+              if (s.publicId == highlightId) '${student.fullName}\'s stop',
               ?scheduledTimeLine(morning: _morning, pickupTime: s.pickupTime, dropTime: s.dropTime),
             ],
           ),

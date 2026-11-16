@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -216,14 +217,47 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
                       ListTile(
                         minVerticalPadding: 8,
                         contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.badge_outlined, color: AppColors.brand),
-                        title: Text(contact.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink)),
+                        leading: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: contact.label.toLowerCase().contains('driver')
+                                ? AppColors.brand.withValues(alpha: 0.12)
+                                : AppColors.teal.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            contact.label.toLowerCase().contains('driver')
+                                ? Icons.directions_bus_outlined
+                                : Icons.support_agent_outlined,
+                            size: 20,
+                            color: contact.label.toLowerCase().contains('driver') ? AppColors.brand : AppColors.teal,
+                          ),
+                        ),
+                        title: Text(
+                          contact.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink),
+                        ),
                         subtitle: Text(
                           [contact.fullName, if (contact.phone.isNotEmpty) contact.phone].join(' · '),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 12, color: AppColors.slate),
                         ),
+                        trailing: contact.phone.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.phone_outlined, color: AppColors.brand, size: 20),
+                                tooltip: 'Copy phone number',
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(text: contact.phone));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Copied ${contact.fullName}\'s phone: ${contact.phone}')),
+                                  );
+                                },
+                              )
+                            : null,
                       ),
                   if (s.requiresDropVerification) ...[
                     const Divider(color: AppColors.border),

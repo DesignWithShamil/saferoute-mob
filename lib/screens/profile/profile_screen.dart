@@ -6,7 +6,6 @@ import '../../core/config/env.dart';
 import '../../models/user.dart';
 import '../../providers/auth_controller.dart';
 import '../../providers/parent_controller.dart';
-import '../../theme/sr_tokens.dart';
 import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 import '../auth/user_tutorial_screen.dart';

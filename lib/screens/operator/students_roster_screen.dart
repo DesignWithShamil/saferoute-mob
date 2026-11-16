@@ -259,7 +259,7 @@ class _StudentsRosterScreenState extends State<StudentsRosterScreen> {
                             width: 44,
                             height: 44,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Text(
+                            errorBuilder: (_, _, _) => Text(
                               (filtered[i].fullName.characters.firstOrNull ?? '?').toUpperCase(),
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17),
                             ),

@@ -152,6 +152,8 @@ class _LiveBody extends StatelessWidget {
             status: s.status,
             isCurrent: identical(s, next),
             isHighlighted: s.publicId != null && s.publicId == childStopId,
+            avatarUrl: (s.publicId != null && s.publicId == childStopId) ? student?.photo : null,
+            studentName: (s.publicId != null && s.publicId == childStopId) ? (student?.fullName ?? live.childName) : null,
             radiusMeters: s.radius,
             details: [
               if (s.publicId == childStopId) '${live.childName}\'s stop on this trip',

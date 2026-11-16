@@ -13,6 +13,20 @@ import 'add_child_screen.dart';
 
 String childStatusLabel(String status) => status.isEmpty ? 'Not marked' : AttendanceStatus.label(status);
 
+Color studentAvatarColor(String name) {
+  const palette = [
+    Color(0xFF2563EB), // Royal Blue
+    Color(0xFF7C3AED), // Purple
+    Color(0xFF059669), // Emerald
+    Color(0xFFD97706), // Amber
+    Color(0xFFDC2626), // Rose
+    Color(0xFF0891B2), // Cyan
+    Color(0xFF4F46E5), // Indigo
+  ];
+  final hash = name.codeUnits.fold(0, (acc, c) => acc + c);
+  return palette[hash % palette.length];
+}
+
 /// The child's assigned pickup / drop stops (StudentSerializer's
 /// RouteStopMiniSerializer coordinates). Stops already drawn as part of the
 /// trip are skipped via [skipStopIds]; a shared stop becomes one marker.
@@ -26,6 +40,8 @@ List<MapPlace> childStopPlaces(Student student, {Set<String> skipStopIds = const
       position: LatLng(pickup.latitude!, pickup.longitude!),
       kind: MapPlaceKind.pickup,
       title: pickup.name,
+      avatarUrl: student.photo,
+      studentName: student.fullName,
       details: [
         shared ? '${student.fullName}\'s pickup and drop point' : '${student.fullName}\'s pickup point',
         ?scheduledTimeLine(morning: true, pickupTime: pickup.pickupTime),
@@ -39,6 +55,8 @@ List<MapPlace> childStopPlaces(Student student, {Set<String> skipStopIds = const
       position: LatLng(drop.latitude!, drop.longitude!),
       kind: MapPlaceKind.drop,
       title: drop.name,
+      avatarUrl: student.photo,
+      studentName: student.fullName,
       details: [
         '${student.fullName}\'s drop point',
         ?scheduledTimeLine(morning: false, dropTime: drop.dropTime),
@@ -223,7 +241,7 @@ class SelectedChildHeader extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 25,
-                          backgroundColor: AppColors.brand,
+                          backgroundColor: studentAvatarColor(child.student.fullName),
                           foregroundColor: Colors.white,
                           backgroundImage: (child.student.photo != null && child.student.photo!.isNotEmpty)
                               ? NetworkImage(child.student.photo!)
@@ -372,15 +390,21 @@ class _Line extends StatelessWidget {
 }
 
 Future<void> showStudentPhotoDialog(BuildContext context, Student student) async {
-  final controller = TextEditingController(text: student.photo ?? '');
-  final presets = [
-    'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&h=200&fit=crop&crop=faces',
-    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop&crop=faces',
-    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&h=200&fit=crop&crop=faces',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
-    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&h=200&fit=crop&crop=faces',
-    'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200&h=200&fit=crop&crop=faces',
-  ];
+  final initial = student.fullName.isNotEmpty ? student.fullName.characters.first.toUpperCase() : '?';
+
+  Color avatarColor(String name) {
+    const palette = [
+      Color(0xFF2563EB), // Royal Blue
+      Color(0xFF7C3AED), // Purple
+      Color(0xFF059669), // Emerald
+      Color(0xFFD97706), // Amber
+      Color(0xFFDC2626), // Rose
+      Color(0xFF0891B2), // Cyan
+      Color(0xFF4F46E5), // Indigo
+    ];
+    final hash = name.codeUnits.fold(0, (acc, c) => acc + c);
+    return palette[hash % palette.length];
+  }
 
   await showDialog<void>(
     context: context,
@@ -388,88 +412,119 @@ Future<void> showStudentPhotoDialog(BuildContext context, Student student) async
       bool saving = false;
       return StatefulBuilder(
         builder: (context, setState) {
+          final hasPhoto = student.photo != null && student.photo!.trim().isNotEmpty;
+          final color = avatarColor(student.fullName);
+
           return AlertDialog(
-            title: Text('Student Photo: ${student.fullName}'),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: Text(
+              'Student Profile: ${student.fullName}',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            ),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Text('Upload photo URL or select a student portrait for quick identification on maps, driver roster, and attendance:', style: TextStyle(fontSize: 12, color: AppColors.slate)),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(
-                      labelText: 'Photo Image URL',
-                      hintText: 'https://...',
-                      prefixIcon: Icon(Icons.link),
+                  // Live Avatar Preview Circle
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: hasPhoto ? Colors.transparent : color,
+                      border: Border.all(
+                        color: hasPhoto ? AppColors.brand : color.withValues(alpha: 0.4),
+                        width: 3,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (hasPhoto ? AppColors.brand : color).withValues(alpha: 0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text('Preset Student Avatars:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final url in presets)
-                        GestureDetector(
-                          onTap: () {
-                            controller.text = url;
-                            setState(() {});
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: controller.text == url ? AppColors.brand : Colors.transparent,
-                                width: 2.5,
+                    child: ClipOval(
+                      child: hasPhoto
+                          ? Image.network(
+                              student.photo!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                color: color,
+                                alignment: Alignment.center,
+                                child: Text(
+                                  initial,
+                                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white),
+                                ),
+                              ),
+                            )
+                          : Container(
+                              color: color,
+                              alignment: Alignment.center,
+                              child: Text(
+                                initial,
+                                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white),
                               ),
                             ),
-                            child: CircleAvatar(
-                              radius: 20,
-                              backgroundImage: NetworkImage(url),
-                            ),
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
+                  const SizedBox(height: 12),
+
+                  Text(
+                    hasPhoto ? 'Photo Uploaded' : 'Letter Avatar ("$initial") Active',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: hasPhoto ? AppColors.brand : color),
+                  ),
+
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.slate.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Text(
+                      'Upload student portrait image files directly via the SafeRoute parent web portal.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: AppColors.slate, height: 1.4),
+                    ),
+                  ),
+
+                  if (hasPhoto) ...[
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
+                      label: const Text('Remove Photo', style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.bold)),
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              setState(() => saving = true);
+                              try {
+                                await dialogContext.read<ParentController>().updateChildPhoto(student.publicId, '');
+                                if (dialogContext.mounted) {
+                                  Navigator.of(dialogContext).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Student profile photo removed.')),
+                                  );
+                                }
+                              } catch (e) {
+                                setState(() => saving = false);
+                                if (dialogContext.mounted) {
+                                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                    SnackBar(content: Text('Failed to remove photo: $e')),
+                                  );
+                                }
+                              }
+                            },
+                    ),
+                  ],
                 ],
               ),
             ),
             actions: [
               TextButton(
-                onPressed: saving ? null : () => Navigator.of(dialogContext).pop(),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: saving
-                    ? null
-                    : () async {
-                        final text = controller.text.trim();
-                        if (text.isEmpty) return;
-                        setState(() => saving = true);
-                        try {
-                          await dialogContext.read<ParentController>().updateChildPhoto(student.publicId, text);
-                          if (dialogContext.mounted) {
-                            Navigator.of(dialogContext).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Profile photo updated successfully!')),
-                            );
-                          }
-                        } catch (e) {
-                          setState(() => saving = false);
-                          if (dialogContext.mounted) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              SnackBar(content: Text('Failed to update photo: $e')),
-                            );
-                          }
-                        }
-                      },
-                child: saving
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Save Photo'),
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Close'),
               ),
             ],
           );

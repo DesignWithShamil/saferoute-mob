@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -29,6 +31,7 @@ class MapStop {
     this.badge,
     this.details = const [],
     this.avatarUrl,
+    this.studentName,
   });
 
   final LatLng position;
@@ -54,6 +57,7 @@ class MapStop {
 
   /// Child photo for instant visual stop identification
   final String? avatarUrl;
+  final String? studentName;
 }
 
 enum MapPlaceKind { school, pickup, drop }
@@ -61,12 +65,21 @@ enum MapPlaceKind { school, pickup, drop }
 /// A point that is not a stop of the displayed trip: the school, or a
 /// child's pickup/drop stop from their assignment.
 class MapPlace {
-  const MapPlace({required this.position, required this.kind, required this.title, this.details = const []});
+  const MapPlace({
+    required this.position,
+    required this.kind,
+    required this.title,
+    this.details = const [],
+    this.avatarUrl,
+    this.studentName,
+  });
 
   final LatLng position;
   final MapPlaceKind kind;
   final String title;
   final List<String> details;
+  final String? avatarUrl;
+  final String? studentName;
 }
 
 MapPlace? schoolPlace(School? school) => school == null || !school.hasPosition
@@ -288,21 +301,25 @@ class _TripMapState extends State<TripMap> {
                   for (final p in widget.places)
                     Marker(
                       point: p.position,
-                      width: 38,
-                      height: 38,
+                      width: (p.kind == MapPlaceKind.pickup || p.kind == MapPlaceKind.drop) ? 46 : 38,
+                      height: (p.kind == MapPlaceKind.pickup || p.kind == MapPlaceKind.drop) ? 54 : 38,
+                      alignment: (p.kind == MapPlaceKind.pickup || p.kind == MapPlaceKind.drop)
+                          ? Alignment.topCenter
+                          : Alignment.center,
                       child: GestureDetector(
                         onTap: () => _showDetails(_placeIcon(p.kind), _placeColor(p.kind), p.title, [
                           _placeLabel(p.kind),
                           ...p.details,
                         ]),
-                        child: _PlaceMarker(kind: p.kind),
+                        child: _PlaceMarker(place: p),
                       ),
                     ),
                   for (final s in widget.stops)
                     Marker(
                       point: s.position,
-                      width: s.isHighlighted ? 42 : 34,
-                      height: s.isHighlighted ? 42 : 34,
+                      width: s.isHighlighted ? 46 : 34,
+                      height: s.isHighlighted ? 54 : 34,
+                      alignment: s.isHighlighted ? Alignment.topCenter : Alignment.center,
                       child: GestureDetector(
                         onTap: () => _showDetails(
                           Icons.place,
@@ -435,20 +452,179 @@ String _placeLabel(MapPlaceKind kind) => switch (kind) {
       MapPlaceKind.drop => 'Drop point',
     };
 
-class _PlaceMarker extends StatelessWidget {
-  const _PlaceMarker({required this.kind});
-  final MapPlaceKind kind;
+class _TrianglePainter extends CustomPainter {
+  const _TrianglePainter(this.color);
+  final Color color;
 
   @override
-  Widget build(BuildContext context) => Container(
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final path = ui.Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrianglePainter oldDelegate) => oldDelegate.color != color;
+}
+
+class _StudentPinMarker extends StatelessWidget {
+  const _StudentPinMarker({
+    this.avatarUrl,
+    this.studentName,
+    this.badgeIcon,
+    this.badgeColor,
+    this.badgeText,
+    this.borderColor = Colors.white,
+    this.glowColor = const Color(0x334F46E5),
+  });
+
+  final String? avatarUrl;
+  final String? studentName;
+  final IconData? badgeIcon;
+  final Color? badgeColor;
+  final String? badgeText;
+  final Color borderColor;
+  final Color glowColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = (studentName != null && studentName!.trim().isNotEmpty)
+        ? studentName!.trim().substring(0, 1).toUpperCase()
+        : 'S';
+    final hasPhoto = avatarUrl != null && avatarUrl!.trim().isNotEmpty;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: borderColor, width: 2.5),
+                boxShadow: [
+                  BoxShadow(color: glowColor, blurRadius: 6, offset: const Offset(0, 2)),
+                  const BoxShadow(color: Colors.black26, blurRadius: 3, offset: Offset(0, 1)),
+                ],
+              ),
+              child: ClipOval(
+                child: hasPhoto
+                    ? Image.network(
+                        avatarUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _initialAvatar(initial),
+                      )
+                    : _initialAvatar(initial),
+              ),
+            ),
+            if (badgeIcon != null)
+              Positioned(
+                right: -2,
+                bottom: -2,
+                child: Container(
+                  width: 15,
+                  height: 15,
+                  decoration: BoxDecoration(
+                    color: badgeColor ?? AppColors.brand,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: Icon(badgeIcon, size: 8, color: Colors.white),
+                ),
+              )
+            else if (badgeText != null)
+              Positioned(
+                right: -4,
+                bottom: -2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: badgeColor ?? AppColors.brand,
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(color: Colors.white, width: 1.2),
+                  ),
+                  child: Text(
+                    badgeText!,
+                    style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        CustomPaint(
+          size: const Size(10, 6),
+          painter: _TrianglePainter(borderColor),
+        ),
+      ],
+    );
+  }
+
+  Widget _initialAvatar(String initial) {
+    final colors = [
+      AppColors.brand,
+      const Color(0xFF0891B2),
+      const Color(0xFF0D9488),
+      const Color(0xFFD97706),
+      const Color(0xFFE11D48),
+      const Color(0xFF7C3AED),
+    ];
+    final color = colors[initial.codeUnitAt(0) % colors.length];
+    return Container(
+      color: color,
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15),
+      ),
+    );
+  }
+}
+
+class _PlaceMarker extends StatelessWidget {
+  const _PlaceMarker({required this.place});
+  final MapPlace place;
+
+  @override
+  Widget build(BuildContext context) {
+    if (place.kind == MapPlaceKind.school) {
+      return Container(
         decoration: BoxDecoration(
-          color: _placeColor(kind),
+          color: _placeColor(place.kind),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: Colors.white, width: 3),
           boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
         ),
-        child: Icon(_placeIcon(kind), color: Colors.white, size: 20),
+        child: Icon(_placeIcon(place.kind), color: Colors.white, size: 20),
       );
+    }
+
+    if (place.kind == MapPlaceKind.pickup) {
+      return _StudentPinMarker(
+        avatarUrl: place.avatarUrl,
+        studentName: place.studentName,
+        badgeIcon: Icons.directions_walk,
+        badgeColor: AppColors.brand,
+        borderColor: Colors.white,
+      );
+    }
+
+    return _StudentPinMarker(
+      avatarUrl: place.avatarUrl,
+      studentName: place.studentName,
+      badgeIcon: Icons.home,
+      badgeColor: AppColors.green,
+      borderColor: Colors.white,
+    );
+  }
 }
 
 class _StopMarker extends StatelessWidget {
@@ -457,20 +633,14 @@ class _StopMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (stop.isHighlighted && stop.avatarUrl != null && stop.avatarUrl!.isNotEmpty) {
-      return Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.purple, width: 3.5),
-          boxShadow: const [BoxShadow(blurRadius: 6, color: Colors.black38, offset: Offset(0, 2))],
-        ),
-        child: ClipOval(
-          child: Image.network(
-            stop.avatarUrl!,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _buildBadge(context),
-          ),
-        ),
+    if (stop.isHighlighted) {
+      return _StudentPinMarker(
+        avatarUrl: stop.avatarUrl,
+        studentName: stop.studentName,
+        badgeText: 'STOP',
+        badgeColor: const Color(0xFF4F46E5),
+        borderColor: Colors.purple,
+        glowColor: const Color(0x669333EA),
       );
     }
     return _buildBadge(context);
