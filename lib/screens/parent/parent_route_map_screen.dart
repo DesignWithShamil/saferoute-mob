@@ -6,6 +6,7 @@ import '../../core/api/api_exception.dart';
 import '../../models/student.dart';
 import '../../models/trip.dart';
 import '../../providers/parent_controller.dart';
+import '../../services/route_geometry_service.dart';
 import '../../widgets/state_views.dart';
 import '../../widgets/trip_map.dart';
 import 'parent_widgets.dart';
@@ -25,11 +26,27 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
   String? _error;
   bool _loading = true;
   String? _loadedFor;
+  RouteGeometry? _geometry;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  void _fetchGeometry(ParentLink link, bool morning) {
+    final route = morning ? link.pickupRoute : link.dropRoute;
+    final points = [
+      for (final s in route?.stops ?? const [])
+        if (s.hasPosition) LatLng(s.latitude!, s.longitude!),
+    ];
+    if (points.length < 2) {
+      if (mounted) setState(() => _geometry = null);
+      return;
+    }
+    RouteGeometryService().forStops(points).then((geom) {
+      if (mounted) setState(() => _geometry = geom);
+    }).catchError((_) {});
   }
 
   Future<void> _load() async {
@@ -40,6 +57,7 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
         _detail = null;
         _error = null;
         _loadedFor = null;
+        _geometry = null;
       });
       return;
     }
@@ -50,13 +68,16 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
     try {
       final detail = await _c.childWithStops(id);
       if (!mounted) return;
+      var morning = _morning;
+      if (morning && detail.pickupRoute == null && detail.dropRoute != null) morning = false;
+      if (!morning && detail.dropRoute == null && detail.pickupRoute != null) morning = true;
       setState(() {
         _detail = detail;
         _loadedFor = id;
+        _morning = morning;
         _loading = false;
-        if (_morning && detail.pickupRoute == null && detail.dropRoute != null) _morning = false;
-        if (!_morning && detail.dropRoute == null && detail.pickupRoute != null) _morning = true;
       });
+      _fetchGeometry(detail, morning);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -85,23 +106,36 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
     final route = _morning ? link.pickupRoute : link.dropRoute;
     final student = link.student;
     final highlightId = _morning ? student.pickupStop?.publicId : student.dropStop?.publicId;
-    final stops = [
-      for (final s in route?.stops ?? const [])
-        if (s.hasPosition)
-          MapStop(
-            position: LatLng(s.latitude!, s.longitude!),
-            sequence: s.sequence,
-            name: s.name,
-            status: TripStopStatus.pending,
-            isHighlighted: s.publicId == highlightId,
-            avatarUrl: s.publicId == highlightId ? student.photo : null,
-            studentName: s.publicId == highlightId ? student.fullName : null,
-            details: [
-              if (s.publicId == highlightId) '${student.fullName}\'s stop',
-              ?scheduledTimeLine(morning: _morning, pickupTime: s.pickupTime, dropTime: s.dropTime),
-            ],
-          ),
-    ];
+    final validRouteStops = (route?.stops ?? const []).where((s) => s.hasPosition).toList();
+    final stops = <MapStop>[];
+    for (int i = 0; i < validRouteStops.length; i++) {
+      final s = validRouteStops[i];
+      final isFirst = i == 0;
+      final isLast = i == validRouteStops.length - 1;
+      final schoolAnchor = (_morning && isLast) || (!_morning && isFirst);
+      final isChildStop = s.publicId == highlightId;
+      stops.add(
+        MapStop(
+          position: LatLng(s.latitude!, s.longitude!),
+          sequence: s.sequence,
+          name: s.name,
+          status: TripStopStatus.pending,
+          isHighlighted: isChildStop,
+          isSchoolAnchor: schoolAnchor,
+          isRouteStart: isFirst && !schoolAnchor,
+          isRouteEnd: isLast && !schoolAnchor,
+          avatarUrl: isChildStop ? student.photo : null,
+          studentName: isChildStop ? student.fullName : null,
+          details: [
+            if (isChildStop) '${student.fullName}\'s stop',
+            if (schoolAnchor) '🏫 School Campus',
+            if (isFirst && !schoolAnchor) '🚩 Route Starting Stop',
+            if (isLast && !schoolAnchor) '🏁 Route End Stop',
+            ?scheduledTimeLine(morning: _morning, pickupTime: s.pickupTime, dropTime: s.dropTime),
+          ],
+        ),
+      );
+    }
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -117,7 +151,10 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
                     avatar: const Icon(Icons.wb_sunny_rounded, size: 18),
                     label: const SizedBox(width: double.infinity, child: Text('Morning trip', textAlign: TextAlign.center)),
                     selected: _morning,
-                    onSelected: (_) => setState(() => _morning = true),
+                    onSelected: (_) {
+                      setState(() => _morning = true);
+                      _fetchGeometry(link, true);
+                    },
                   ),
                 ),
               if (link.pickupRoute != null && link.dropRoute != null) const SizedBox(width: 8),
@@ -127,7 +164,10 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
                     avatar: const Icon(Icons.nights_stay_rounded, size: 18),
                     label: const SizedBox(width: double.infinity, child: Text('Evening trip', textAlign: TextAlign.center)),
                     selected: !_morning,
-                    onSelected: (_) => setState(() => _morning = false),
+                    onSelected: (_) {
+                      setState(() => _morning = false);
+                      _fetchGeometry(link, false);
+                    },
                   ),
                 ),
             ],
@@ -152,6 +192,7 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
             const SizedBox(height: 10),
             TripMap(
               stops: stops,
+              geometry: _geometry,
               places: [?schoolPlace(link.school), ...childStopPlaces(student, skipStopIds: {for (final s in route.stops) s.publicId})],
               followBusByDefault: false,
               heightFraction: 0.35,

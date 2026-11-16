@@ -134,6 +134,7 @@ class _TripMapState extends State<TripMap> {
   bool _ready = false;
   LatLng? _me;
   bool _locating = false;
+  bool _isSatellite = false;
 
   @override
   void didUpdateWidget(covariant TripMap oldWidget) {
@@ -263,8 +264,12 @@ class _TripMapState extends State<TripMap> {
 
     final geometry = widget.geometry;
     final fallback = geometry?.isFallback ?? false;
-    final path = geometry?.points ?? const <LatLng>[];
-    final (done, remaining) = fallback ? (const <LatLng>[], path) : _splitPath(path);
+    final path = (geometry != null && geometry.points.isNotEmpty)
+        ? geometry.points
+        : widget.stops.map((s) => s.position).toList();
+    final (done, remaining) = (fallback || (geometry == null && widget.bus == null))
+        ? (const <LatLng>[], path)
+        : _splitPath(path);
     final current = widget.stops.where((s) => s.isCurrent).firstOrNull;
 
     final mapBody = Stack(
@@ -283,7 +288,12 @@ class _TripMapState extends State<TripMap> {
             },
           ),
           children: [
-            TileLayer(urlTemplate: Env.mapTileUrl, userAgentPackageName: 'com.saferoute.app'),
+            TileLayer(
+              urlTemplate: _isSatellite
+                  ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                  : Env.mapTileUrl,
+              userAgentPackageName: 'com.saferoute.app',
+            ),
             PolylineLayer(polylines: [
               if (remaining.length > 1)
                 Polyline(
@@ -405,6 +415,13 @@ class _TripMapState extends State<TripMap> {
                   },
                 ),
               ],
+              const SizedBox(height: 8),
+              _MapButton(
+                icon: _isSatellite ? Icons.map_rounded : Icons.satellite_alt_rounded,
+                tooltip: _isSatellite ? 'Streets view' : 'Satellite view',
+                highlighted: _isSatellite,
+                onPressed: () => setState(() => _isSatellite = !_isSatellite),
+              ),
               const SizedBox(height: 8),
               _MapButton(
                 icon: Icons.fit_screen_rounded,
@@ -730,6 +747,29 @@ class _StopMarker extends StatelessWidget {
         child: const Text(
           '🚩 START · 🏁 END',
           style: TextStyle(fontWeight: FontWeight.w900, fontSize: 8.5, color: Colors.white, letterSpacing: 0.2),
+        ),
+      );
+    }
+
+    if (school) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0D9488),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black38, offset: Offset(0, 1.5))],
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.school_rounded, color: Colors.white, size: 12),
+            SizedBox(width: 3),
+            Text(
+              'SCHOOL',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 8.5, color: Colors.white, letterSpacing: 0.2),
+            ),
+          ],
         ),
       );
     }

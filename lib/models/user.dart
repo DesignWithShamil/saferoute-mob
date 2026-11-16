@@ -52,7 +52,14 @@ class AppUser {
     required this.fullName,
     required this.role,
     this.phone = '',
+    this.photo,
     this.schoolId,
+    this.schoolName,
+    this.schoolCode,
+    this.schoolAddress,
+    this.schoolLatitude,
+    this.schoolLongitude,
+    this.schoolLogo,
     this.schoolSettings = const SchoolSettings(),
   });
 
@@ -60,8 +67,15 @@ class AppUser {
   final String email;
   final String fullName;
   final String phone;
+  final String? photo;
   final String role;
   final String? schoolId;
+  final String? schoolName;
+  final String? schoolCode;
+  final String? schoolAddress;
+  final double? schoolLatitude;
+  final double? schoolLongitude;
+  final String? schoolLogo;
   final SchoolSettings schoolSettings;
 
   bool get isDriver => role == UserRole.driver;
@@ -74,8 +88,15 @@ class AppUser {
         email: asString(json['email']) ?? '',
         fullName: asString(json['full_name']) ?? '',
         phone: asString(json['phone']) ?? '',
+        photo: asString(json['photo']),
         role: asString(json['role']) ?? '',
         schoolId: asString(json['school']),
+        schoolName: asString(json['school_name']),
+        schoolCode: asString(json['school_code']),
+        schoolAddress: asString(json['school_address']),
+        schoolLatitude: asDouble(json['school_latitude']),
+        schoolLongitude: asDouble(json['school_longitude']),
+        schoolLogo: asString(json['school_logo']),
         schoolSettings: json['school_settings'] is Map
             ? SchoolSettings.fromJson(asMap(json['school_settings']))
             : const SchoolSettings(),
@@ -86,6 +107,8 @@ class School {
   const School({
     required this.publicId,
     required this.name,
+    this.code = '',
+    this.logo,
     this.contactPhone = '',
     this.address = '',
     this.latitude,
@@ -94,6 +117,8 @@ class School {
 
   final String publicId;
   final String name;
+  final String code;
+  final String? logo;
   final String contactPhone;
   final String address;
 
@@ -106,6 +131,8 @@ class School {
   factory School.fromJson(Map<String, dynamic> json) => School(
         publicId: asString(json['public_id']) ?? '',
         name: asString(json['name']) ?? '',
+        code: asString(json['code']) ?? '',
+        logo: asString(json['logo']),
         contactPhone: asString(json['contact_phone']) ?? '',
         address: asString(json['address']) ?? '',
         latitude: asDouble(json['latitude']),

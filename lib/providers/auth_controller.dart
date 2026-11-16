@@ -87,8 +87,8 @@ class AuthController extends ChangeNotifier {
 
   Future<String?> login(String email, String password) async {
     try {
-      await _s.auth.login(email, password);
-      await _loadProfile();
+      final userFromLogin = await _s.auth.login(email, password);
+      await _loadProfile(userHint: userFromLogin);
       return null;
     } on ApiException catch (e) {
       if (e.kind == ApiErrorKind.network || e.kind == ApiErrorKind.timeout) {
@@ -179,21 +179,32 @@ class AuthController extends ChangeNotifier {
     _setSignedOut();
   }
 
-  Future<void> _loadProfile() async {
-    final me = await _s.auth.me();
+  Future<void> _loadProfile({AppUser? userHint}) async {
+    final me = userHint ?? await _s.auth.me();
     user = me;
-    school = null;
+    if (me.schoolId != null) {
+      school = School(
+        publicId: me.schoolId!,
+        name: me.schoolName ?? 'School',
+        code: me.schoolCode ?? '',
+        address: me.schoolAddress ?? '',
+        latitude: me.schoolLatitude,
+        longitude: me.schoolLongitude,
+        logo: me.schoolLogo,
+      );
+    } else {
+      school = null;
+    }
     status = AuthStatus.signedIn;
     _s.deepLinks.attachUser(me);
     _s.pusher.connect();
     notifyListeners();
-    if (me.isSupportedOnMobile) {
-      try {
-        school = await _s.transport.mySchool();
+
+    if (school == null && me.isSupportedOnMobile) {
+      _s.transport.mySchool().then((s) {
+        school = s;
         notifyListeners();
-      } catch (_) {
-        // School name is cosmetic; don't block sign-in on it.
-      }
+      }).catchError((_) {});
     }
   }
 

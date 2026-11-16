@@ -8,6 +8,7 @@ import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 import 'add_child_screen.dart';
 import 'child_detail_screen.dart';
+import 'parent_widgets.dart';
 
 /// React `/parent/profile` "My Children": web-style cards, PIN, full detail on tap.
 class ChildrenListScreen extends StatefulWidget {
@@ -141,12 +142,38 @@ class _ChildSummaryCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    CircleAvatar(
-                      radius: 26,
-                      backgroundColor: AppColors.brand.withValues(alpha: 0.12),
-                      child: Text(
-                        s.fullName.isEmpty ? '?' : s.fullName.characters.first.toUpperCase(),
-                        style: const TextStyle(color: AppColors.brand, fontWeight: FontWeight.w800, fontSize: 20),
+                    GestureDetector(
+                      onTap: () => showStudentPhotoDialog(context, s),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          CircleAvatar(
+                            radius: 26,
+                            backgroundColor: AppColors.brand.withValues(alpha: 0.12),
+                            backgroundImage: (s.photo != null && s.photo!.trim().isNotEmpty)
+                                ? NetworkImage(s.photo!.trim())
+                                : null,
+                            child: (s.photo == null || s.photo!.trim().isEmpty)
+                                ? Text(
+                                    s.fullName.isEmpty ? '?' : s.fullName.characters.first.toUpperCase(),
+                                    style: const TextStyle(color: AppColors.brand, fontWeight: FontWeight.w800, fontSize: 20),
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: -2,
+                            right: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: AppColors.brand,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 1.5),
+                              ),
+                              child: const Icon(Icons.camera_alt_rounded, size: 10, color: Colors.white),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 14),

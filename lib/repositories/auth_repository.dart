@@ -13,7 +13,7 @@ class AuthRepository {
 
   Future<bool> get hasSession async => (await _storage.accessToken) != null;
 
-  Future<void> login(String email, String password) async {
+  Future<AppUser?> login(String email, String password) async {
     final normalizedEmail = email.trim().toLowerCase();
     final data = asMap(
       await _api.post(ApiEndpoints.login, data: {'email': normalizedEmail, 'password': password}),
@@ -23,6 +23,10 @@ class AuthRepository {
       throw ApiException(ApiErrorKind.server, 'Unexpected login response from server.');
     }
     await _storage.saveTokens(access: access, refresh: data['refresh'] as String?);
+    if (data['user'] is Map) {
+      return AppUser.fromJson(asMap(data['user']));
+    }
+    return null;
   }
 
   Future<void> requestParentRegisterOtp({
