@@ -134,9 +134,17 @@ class ParentController extends ChangeNotifier {
   }
 
   /// Updates student profile photo and reloads state across all screens
-  Future<void> updateChildPhoto(String studentId, String photoUrl) async {
-    await _s.transport.uploadStudentPhoto(studentId, photoUrl);
+  Future<String?> updateChildPhoto(String studentId, String photoUrl) async {
+    final newUrl = await _s.transport.uploadStudentPhoto(studentId, photoUrl);
     await load();
+    return newUrl;
+  }
+
+  /// Uploads student profile photo from local file and reloads state across all screens
+  Future<String?> uploadChildPhotoFile(String studentId, String filePath) async {
+    final newUrl = await _s.transport.uploadStudentPhotoFile(studentId, filePath);
+    await load();
+    return newUrl;
   }
 
   int _pollUsers = 0;

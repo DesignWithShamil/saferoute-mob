@@ -120,16 +120,38 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
               child: SectionCard(
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: AppColors.brand.withValues(alpha: 0.12),
-                      backgroundImage: (s.photo != null && s.photo!.isNotEmpty) ? NetworkImage(s.photo!) : null,
-                      child: (s.photo == null || s.photo!.isEmpty)
-                          ? Text(
-                              s.fullName.isEmpty ? '?' : s.fullName.characters.first.toUpperCase(),
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.brand),
-                            )
-                          : null,
+                    GestureDetector(
+                      onTap: () => showStudentPhotoDialog(context, s),
+                      child: Tooltip(
+                        message: 'Tap to change student photo',
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundColor: AppColors.brand.withValues(alpha: 0.12),
+                              backgroundImage: (s.photo != null && s.photo!.isNotEmpty) ? NetworkImage(s.photo!) : null,
+                              child: (s.photo == null || s.photo!.isEmpty)
+                                  ? Text(
+                                      s.fullName.isEmpty ? '?' : s.fullName.characters.first.toUpperCase(),
+                                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.brand),
+                                    )
+                                  : null,
+                            ),
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.brand,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.camera_alt_rounded, size: 12, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(

@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../models/json.dart';
@@ -55,11 +57,29 @@ class TransportRepository {
 
   Future<void> unlinkChild(String studentId) => _api.delete(ApiEndpoints.parentChildUnlink(studentId));
 
-  /// Update student profile photo
+  /// Update student profile photo via URL or clear photo if empty
   Future<String?> uploadStudentPhoto(String studentId, String photoUrl) async {
-    final res = await _api.post(ApiEndpoints.studentPhoto(studentId), data: {'photo_url': photoUrl});
+    final res = await _api.post(
+      ApiEndpoints.studentPhoto(studentId),
+      data: photoUrl.trim().isEmpty ? {'remove': true} : {'photo_url': photoUrl},
+    );
     final data = asMap(res);
-    return asString(data['photo_url']);
+    return asString(data['photo_url'] ?? data['photo']);
+  }
+
+  /// Upload student profile photo directly from a local image file path
+  Future<String?> uploadStudentPhotoFile(String studentId, String filePath) async {
+    final fileName = filePath.split(RegExp(r'[\\/]')).last;
+    final formData = FormData.fromMap({
+      'photo': await MultipartFile.fromFile(filePath, filename: fileName),
+    });
+    final res = await _api.post(
+      ApiEndpoints.studentPhoto(studentId),
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+    final data = asMap(res);
+    return asString(data['photo_url'] ?? data['photo']);
   }
 
   /// Child detail with route stops for the parent's route map.

@@ -13,7 +13,9 @@
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>SafeRoute keeps sharing the bus location during an active trip while the app is in the background.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>The camera is used to scan student QR cards for attendance.</string>
+	<string>The camera is used to scan student QR cards and capture profile photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Select a photo from your gallery for your student's profile.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

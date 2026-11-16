@@ -32,16 +32,20 @@ class ApiClient {
         responseType: ResponseType.json,
       );
 
-  Future<dynamic> get(String path, {Map<String, dynamic>? query}) =>
-      _send(() => _dio.get(path, queryParameters: query));
+  Future<dynamic> get(String path, {Map<String, dynamic>? query, Options? options}) =>
+      _send(() => _dio.get(path, queryParameters: query, options: options));
 
-  Future<dynamic> post(String path, {Object? data}) => _send(() => _dio.post(path, data: data ?? const {}));
+  Future<dynamic> post(String path, {Object? data, Options? options}) =>
+      _send(() => _dio.post(path, data: data ?? const {}, options: options));
 
-  Future<dynamic> patch(String path, {Object? data}) => _send(() => _dio.patch(path, data: data ?? const {}));
+  Future<dynamic> patch(String path, {Object? data, Options? options}) =>
+      _send(() => _dio.patch(path, data: data ?? const {}, options: options));
 
-  Future<dynamic> put(String path, {Object? data}) => _send(() => _dio.put(path, data: data ?? const {}));
+  Future<dynamic> put(String path, {Object? data, Options? options}) =>
+      _send(() => _dio.put(path, data: data ?? const {}, options: options));
 
-  Future<dynamic> delete(String path, {Object? data}) => _send(() => _dio.delete(path, data: data));
+  Future<dynamic> delete(String path, {Object? data, Options? options}) =>
+      _send(() => _dio.delete(path, data: data, options: options));
 
   /// Returns `data.results` of a paginated list response.
   Future<List<dynamic>> getList(String path, {Map<String, dynamic>? query}) async {

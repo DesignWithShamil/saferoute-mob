@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
@@ -406,14 +407,109 @@ Future<void> showStudentPhotoDialog(BuildContext context, Student student) async
     return palette[hash % palette.length];
   }
 
+  String? currentPhoto = student.photo;
+
   await showDialog<void>(
     context: context,
     builder: (dialogContext) {
-      bool saving = false;
+      bool isSaving = false;
+      String? savingMessage;
+      final picker = ImagePicker();
+
       return StatefulBuilder(
         builder: (context, setState) {
-          final hasPhoto = student.photo != null && student.photo!.trim().isNotEmpty;
+          final hasPhoto = currentPhoto != null && currentPhoto!.trim().isNotEmpty;
           final color = avatarColor(student.fullName);
+
+          Future<void> pickAndUpload(ImageSource source) async {
+            final controller = dialogContext.read<ParentController>();
+            final messenger = ScaffoldMessenger.of(context);
+            try {
+              final picked = await picker.pickImage(
+                source: source,
+                maxWidth: 1024,
+                maxHeight: 1024,
+                imageQuality: 85,
+              );
+              if (picked == null) return;
+
+              if (context.mounted) {
+                setState(() {
+                  isSaving = true;
+                  savingMessage = 'Uploading student photo...';
+                });
+              }
+
+              final newUrl = await controller.uploadChildPhotoFile(student.publicId, picked.path);
+
+              if (context.mounted) {
+                setState(() {
+                  currentPhoto = newUrl;
+                  isSaving = false;
+                  savingMessage = null;
+                });
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Student profile photo uploaded successfully.'),
+                    backgroundColor: AppColors.green,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                setState(() {
+                  isSaving = false;
+                  savingMessage = null;
+                });
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to upload photo: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          }
+
+          Future<void> removePhoto() async {
+            final controller = dialogContext.read<ParentController>();
+            final messenger = ScaffoldMessenger.of(context);
+            if (context.mounted) {
+              setState(() {
+                isSaving = true;
+                savingMessage = 'Removing photo...';
+              });
+            }
+            try {
+              await controller.updateChildPhoto(student.publicId, '');
+
+              if (context.mounted) {
+                setState(() {
+                  currentPhoto = null;
+                  isSaving = false;
+                  savingMessage = null;
+                });
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Student profile photo removed. Letter avatar active.'),
+                  ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                setState(() {
+                  isSaving = false;
+                  savingMessage = null;
+                });
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to remove photo: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          }
 
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -428,8 +524,8 @@ Future<void> showStudentPhotoDialog(BuildContext context, Student student) async
                 children: [
                   // Live Avatar Preview Circle
                   Container(
-                    width: 88,
-                    height: 88,
+                    width: 92,
+                    height: 92,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: hasPhoto ? Colors.transparent : color,
@@ -448,14 +544,15 @@ Future<void> showStudentPhotoDialog(BuildContext context, Student student) async
                     child: ClipOval(
                       child: hasPhoto
                           ? Image.network(
-                              student.photo!,
+                              currentPhoto!,
+                              key: ValueKey(currentPhoto),
                               fit: BoxFit.cover,
                               errorBuilder: (_, _, _) => Container(
                                 color: color,
                                 alignment: Alignment.center,
                                 child: Text(
                                   initial,
-                                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white),
+                                  style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Colors.white),
                                 ),
                               ),
                             )
@@ -464,7 +561,7 @@ Future<void> showStudentPhotoDialog(BuildContext context, Student student) async
                               alignment: Alignment.center,
                               child: Text(
                                 initial,
-                                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white),
+                                style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Colors.white),
                               ),
                             ),
                     ),
@@ -473,49 +570,115 @@ Future<void> showStudentPhotoDialog(BuildContext context, Student student) async
 
                   Text(
                     hasPhoto ? 'Photo Uploaded' : 'Letter Avatar ("$initial") Active',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: hasPhoto ? AppColors.brand : color),
-                  ),
-
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.slate.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Text(
-                      'Upload student portrait image files directly via the SafeRoute parent web portal.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, color: AppColors.slate, height: 1.4),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: hasPhoto ? AppColors.brand : color,
                     ),
                   ),
 
-                  if (hasPhoto) ...[
+                  const SizedBox(height: 16),
+
+                  if (isSaving)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.brand.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.brand.withValues(alpha: 0.2)),
+                      ),
+                      child: Column(
+                        children: [
+                          const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            savingMessage ?? 'Processing...',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.brand,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.slate.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'Upload Portrait Photo',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Take a fresh photo or choose from gallery for the school transport map.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11, color: AppColors.slate, height: 1.3),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    side: const BorderSide(color: AppColors.brand, width: 1.2),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  icon: const Icon(Icons.photo_library_rounded, size: 18, color: AppColors.brand),
+                                  label: const Text(
+                                    'Gallery',
+                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.brand),
+                                  ),
+                                  onPressed: () => pickAndUpload(ImageSource.gallery),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    backgroundColor: AppColors.brand,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  icon: const Icon(Icons.camera_alt_rounded, size: 18, color: Colors.white),
+                                  label: const Text(
+                                    'Camera',
+                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                                  ),
+                                  onPressed: () => pickAndUpload(ImageSource.camera),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  if (hasPhoto && !isSaving) ...[
                     const SizedBox(height: 12),
                     TextButton.icon(
                       icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
-                      label: const Text('Remove Photo', style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.bold)),
-                      onPressed: saving
-                          ? null
-                          : () async {
-                              setState(() => saving = true);
-                              try {
-                                await dialogContext.read<ParentController>().updateChildPhoto(student.publicId, '');
-                                if (dialogContext.mounted) {
-                                  Navigator.of(dialogContext).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Student profile photo removed.')),
-                                  );
-                                }
-                              } catch (e) {
-                                setState(() => saving = false);
-                                if (dialogContext.mounted) {
-                                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                                    SnackBar(content: Text('Failed to remove photo: $e')),
-                                  );
-                                }
-                              }
-                            },
+                      label: const Text(
+                        'Remove Photo',
+                        style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w700),
+                      ),
+                      onPressed: removePhoto,
                     ),
                   ],
                 ],
@@ -524,7 +687,7 @@ Future<void> showStudentPhotoDialog(BuildContext context, Student student) async
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('Close'),
+                child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w600)),
               ),
             ],
           );
