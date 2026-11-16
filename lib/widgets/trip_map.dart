@@ -107,6 +107,7 @@ class TripMap extends StatefulWidget {
     this.busDetails = const [],
     this.heightFraction = 0.3,
     this.followBusByDefault = true,
+    this.isFullScreen = false,
   });
 
   final List<MapStop> stops;
@@ -121,6 +122,7 @@ class TripMap extends StatefulWidget {
   /// still be scrolled on small phones (drags on the map pan the map).
   final double heightFraction;
   final bool followBusByDefault;
+  final bool isFullScreen;
 
   @override
   State<TripMap> createState() => _TripMapState();
@@ -143,11 +145,28 @@ class _TripMapState extends State<TripMap> {
     }
   }
 
-  List<LatLng> get _allPoints => [
-        ...widget.stops.map((s) => s.position),
-        ...widget.places.map((p) => p.position),
-        ?widget.bus,
-      ];
+  List<LatLng> get _allPoints {
+    final stopPoints = widget.stops.map((s) => s.position).toList();
+    final placePoints = widget.places.map((p) => p.position).toList();
+    final bus = widget.bus;
+    bool includeBus = false;
+    if (bus != null) {
+      if (stopPoints.isEmpty && placePoints.isEmpty) {
+        includeBus = true;
+      } else {
+        final ref = stopPoints.isNotEmpty ? stopPoints.first : placePoints.first;
+        final d = haversineMeters(ref.latitude, ref.longitude, bus.latitude, bus.longitude);
+        if (d <= 80000) {
+          includeBus = true;
+        }
+      }
+    }
+    return [
+      ...stopPoints,
+      ...placePoints,
+      if (includeBus && bus != null) bus,
+    ];
+  }
 
   void _fitAll() {
     final points = _allPoints;
@@ -231,11 +250,13 @@ class _TripMapState extends State<TripMap> {
 
   @override
   Widget build(BuildContext context) {
-    final height = (MediaQuery.sizeOf(context).height * widget.heightFraction).clamp(180.0, 420.0);
+    final height = widget.isFullScreen
+        ? null
+        : (MediaQuery.sizeOf(context).height * widget.heightFraction).clamp(180.0, 420.0);
     final points = _allPoints;
     if (points.isEmpty) {
       return SizedBox(
-        height: height,
+        height: height ?? 300,
         child: const EmptyView(icon: Icons.map_outlined, title: 'No map data yet'),
       );
     }
@@ -246,6 +267,198 @@ class _TripMapState extends State<TripMap> {
     final (done, remaining) = fallback ? (const <LatLng>[], path) : _splitPath(path);
     final current = widget.stops.where((s) => s.isCurrent).firstOrNull;
 
+    final mapBody = Stack(
+      children: [
+        FlutterMap(
+          mapController: _controller,
+          options: MapOptions(
+            initialCameraFit: points.length > 1 && !(_follow && widget.bus != null)
+                ? CameraFit.bounds(bounds: LatLngBounds.fromPoints(points), padding: _fitPadding)
+                : null,
+            initialCenter: (_follow && widget.bus != null && _allPoints.contains(widget.bus) ? widget.bus : null) ?? points.first,
+            initialZoom: 15,
+            onMapReady: () => _ready = true,
+            onPositionChanged: (_, hasGesture) {
+              if (hasGesture && _follow) setState(() => _follow = false);
+            },
+          ),
+          children: [
+            TileLayer(urlTemplate: Env.mapTileUrl, userAgentPackageName: 'com.saferoute.app'),
+            PolylineLayer(polylines: [
+              if (remaining.length > 1)
+                Polyline(
+                  points: remaining,
+                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.25),
+                  strokeWidth: 7,
+                ),
+              if (remaining.length > 1)
+                Polyline(
+                  points: remaining,
+                  color: AppColors.brand,
+                  strokeWidth: 4.5,
+                ),
+              if (done.length > 1)
+                Polyline(
+                  points: done,
+                  color: AppColors.green,
+                  strokeWidth: 5.5,
+                ),
+            ]),
+            if (current != null)
+              CircleLayer(circles: [
+                CircleMarker(
+                  point: current.position,
+                  radius: (current.radiusMeters ?? 100).toDouble(),
+                  useRadiusInMeter: true,
+                  color: AppColors.amber.withValues(alpha: 0.18),
+                  borderColor: AppColors.amber,
+                  borderStrokeWidth: 2,
+                ),
+              ]),
+            MarkerLayer(markers: [
+              for (final p in widget.places)
+                Marker(
+                  point: p.position,
+                  width: (p.kind == MapPlaceKind.pickup || p.kind == MapPlaceKind.drop) ? 46 : 38,
+                  height: (p.kind == MapPlaceKind.pickup || p.kind == MapPlaceKind.drop) ? 54 : 38,
+                  alignment: (p.kind == MapPlaceKind.pickup || p.kind == MapPlaceKind.drop)
+                      ? Alignment.topCenter
+                      : Alignment.center,
+                  child: GestureDetector(
+                    onTap: () => _showDetails(_placeIcon(p.kind), _placeColor(p.kind), p.title, [
+                      _placeLabel(p.kind),
+                      ...p.details,
+                    ]),
+                    child: _PlaceMarker(place: p),
+                  ),
+                ),
+              for (final s in widget.stops)
+                Marker(
+                  point: s.position,
+                  width: (s.isRouteStart && s.isRouteEnd) ? 112 : (s.isRouteStart || s.isRouteEnd) ? 64 : (s.isHighlighted ? 46 : 34),
+                  height: (s.isRouteStart || s.isRouteEnd) ? 30 : (s.isHighlighted ? 54 : 34),
+                  alignment: s.isHighlighted ? Alignment.topCenter : Alignment.center,
+                  child: GestureDetector(
+                    onTap: () => _showDetails(
+                      Icons.place,
+                      (s.isRouteStart && s.isRouteEnd) ? const Color(0xFF059669) : s.isRouteStart ? AppColors.green : (s.isRouteEnd ? const Color(0xFFDC2626) : (s.isCurrent ? AppColors.amber : AppColors.brand)),
+                      '${s.sequence}. ${s.name}',
+                      [
+                        if (s.isRouteStart && s.isRouteEnd) '🚩 Route Starting Stop & 🏁 Destination (Terminal)',
+                        if (!s.isRouteEnd && s.isRouteStart) '🚩 Route Starting Stop',
+                        if (!s.isRouteStart && s.isRouteEnd) '🏁 Route Destination / End Stop',
+                        'Status: ${TripStopStatus.label(s.status)}${s.isCurrent ? ' (current / next stop)' : ''}',
+                        ...s.details,
+                      ],
+                    ),
+                    child: _StopMarker(stop: s),
+                  ),
+                ),
+              if (_me != null)
+                Marker(
+                  point: _me!,
+                  width: 48,
+                  height: 48,
+                  child: const _MeMarker(),
+                ),
+              if (widget.bus != null)
+                Marker(
+                  point: widget.bus!,
+                  width: 44,
+                  height: 44,
+                  child: GestureDetector(
+                    onTap: () => _showDetails(Icons.directions_bus, AppColors.brand, widget.busLabel, [
+                      if (widget.busIsStale) 'Location may be outdated.',
+                      ...widget.busDetails,
+                    ]),
+                    child: _BusMarker(stale: widget.busIsStale),
+                  ),
+                ),
+            ]),
+            const SimpleAttributionWidget(
+              source: Text('OpenStreetMap contributors', style: TextStyle(fontSize: 11)),
+              backgroundColor: Color(0xCCFFFFFF),
+            ),
+          ],
+        ),
+        Positioned(
+          right: 10,
+          top: 10,
+          child: Column(
+            children: [
+              _MapButton(
+                icon: Icons.my_location_rounded,
+                tooltip: 'Show my live location',
+                busy: _locating,
+                highlighted: _me != null,
+                onPressed: _locateMe,
+              ),
+              if (widget.bus != null) ...[
+                const SizedBox(height: 8),
+                _MapButton(
+                  icon: Icons.directions_bus_rounded,
+                  tooltip: _follow ? 'Following bus' : 'Go to bus location',
+                  highlighted: _follow,
+                  onPressed: () {
+                    setState(() => _follow = true);
+                    _controller.move(widget.bus!, _controller.camera.zoom < 14 ? 15 : _controller.camera.zoom);
+                  },
+                ),
+              ],
+              const SizedBox(height: 8),
+              _MapButton(
+                icon: Icons.fit_screen_rounded,
+                tooltip: 'Show whole route',
+                onPressed: () {
+                  setState(() => _follow = false);
+                  _fitAll();
+                },
+              ),
+              const SizedBox(height: 8),
+              _MapButton(
+                icon: widget.isFullScreen ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded,
+                tooltip: widget.isFullScreen ? 'Exit full screen' : 'Full screen map',
+                onPressed: () {
+                  if (widget.isFullScreen) {
+                    Navigator.of(context).pop();
+                  } else {
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => FullScreenTripMapScreen(
+                        stops: widget.stops,
+                        places: widget.places,
+                        geometry: widget.geometry,
+                        bus: widget.bus,
+                        busIsStale: widget.busIsStale,
+                        busLabel: widget.busLabel,
+                        busDetails: widget.busDetails,
+                      ),
+                    ));
+                  }
+                },
+              ),
+              if (widget.isFullScreen || (height != null && height >= 300)) ...[
+                const SizedBox(height: 8),
+                _MapButton(icon: Icons.add_rounded, tooltip: 'Zoom in', onPressed: () => _zoom(1)),
+                const SizedBox(height: 8),
+                _MapButton(icon: Icons.remove_rounded, tooltip: 'Zoom out', onPressed: () => _zoom(-1)),
+              ],
+            ],
+          ),
+        ),
+        if (fallback)
+          const Positioned(
+            left: 10,
+            top: 10,
+            right: 64,
+            child: _MapNote(text: 'Road route unavailable – dashed line joins stops in order'),
+          ),
+      ],
+    );
+
+    if (widget.isFullScreen) {
+      return SizedBox.expand(child: mapBody);
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
@@ -254,161 +467,11 @@ class _TripMapState extends State<TripMap> {
         boxShadow: [BoxShadow(color: AppColors.ink.withValues(alpha: 0.08), blurRadius: 18, offset: const Offset(0, 8))],
       ),
       child: ClipRRect(
-      borderRadius: BorderRadius.circular(22.5),
-      child: SizedBox(
-        height: height,
-        child: Stack(
-          children: [
-            FlutterMap(
-              mapController: _controller,
-              options: MapOptions(
-                initialCameraFit: points.length > 1 && !(_follow && widget.bus != null)
-                    ? CameraFit.bounds(bounds: LatLngBounds.fromPoints(points), padding: _fitPadding)
-                    : null,
-                initialCenter: (_follow ? widget.bus : null) ?? points.first,
-                initialZoom: 15,
-                onMapReady: () => _ready = true,
-                onPositionChanged: (_, hasGesture) {
-                  if (hasGesture && _follow) setState(() => _follow = false);
-                },
-              ),
-              children: [
-                TileLayer(urlTemplate: Env.mapTileUrl, userAgentPackageName: 'com.saferoute.app'),
-                PolylineLayer(polylines: [
-                  if (done.length > 1) Polyline(points: done, color: AppColors.green, strokeWidth: 5),
-                  if (remaining.length > 1)
-                    Polyline(
-                      points: remaining,
-                      color: fallback ? AppColors.slate : AppColors.brand,
-                      strokeWidth: fallback ? 3 : 4,
-                      pattern: fallback
-                          ? StrokePattern.dashed(segments: const [10, 8])
-                          : const StrokePattern.dotted(),
-                    ),
-                ]),
-                if (current != null)
-                  CircleLayer(circles: [
-                    CircleMarker(
-                      point: current.position,
-                      radius: (current.radiusMeters ?? 100).toDouble(),
-                      useRadiusInMeter: true,
-                      color: AppColors.amber.withValues(alpha: 0.18),
-                      borderColor: AppColors.amber,
-                      borderStrokeWidth: 2,
-                    ),
-                  ]),
-                MarkerLayer(markers: [
-                  for (final p in widget.places)
-                    Marker(
-                      point: p.position,
-                      width: (p.kind == MapPlaceKind.pickup || p.kind == MapPlaceKind.drop) ? 46 : 38,
-                      height: (p.kind == MapPlaceKind.pickup || p.kind == MapPlaceKind.drop) ? 54 : 38,
-                      alignment: (p.kind == MapPlaceKind.pickup || p.kind == MapPlaceKind.drop)
-                          ? Alignment.topCenter
-                          : Alignment.center,
-                      child: GestureDetector(
-                        onTap: () => _showDetails(_placeIcon(p.kind), _placeColor(p.kind), p.title, [
-                          _placeLabel(p.kind),
-                          ...p.details,
-                        ]),
-                        child: _PlaceMarker(place: p),
-                      ),
-                    ),
-                  for (final s in widget.stops)
-                    Marker(
-                      point: s.position,
-                      width: s.isHighlighted ? 46 : 34,
-                      height: s.isHighlighted ? 54 : 34,
-                      alignment: s.isHighlighted ? Alignment.topCenter : Alignment.center,
-                      child: GestureDetector(
-                        onTap: () => _showDetails(
-                          Icons.place,
-                          s.isCurrent ? AppColors.amber : AppColors.brand,
-                          '${s.sequence}. ${s.name}',
-                          ['Status: ${TripStopStatus.label(s.status)}${s.isCurrent ? ' (current / next stop)' : ''}', ...s.details],
-                        ),
-                        child: _StopMarker(stop: s),
-                      ),
-                    ),
-                  if (_me != null)
-                    Marker(
-                      point: _me!,
-                      width: 48,
-                      height: 48,
-                      child: const _MeMarker(),
-                    ),
-                  if (widget.bus != null)
-                    Marker(
-                      point: widget.bus!,
-                      width: 44,
-                      height: 44,
-                      child: GestureDetector(
-                        onTap: () => _showDetails(Icons.directions_bus, AppColors.brand, widget.busLabel, [
-                          if (widget.busIsStale) 'Location may be outdated.',
-                          ...widget.busDetails,
-                        ]),
-                        child: _BusMarker(stale: widget.busIsStale),
-                      ),
-                    ),
-                ]),
-                const SimpleAttributionWidget(
-                  source: Text('OpenStreetMap contributors', style: TextStyle(fontSize: 11)),
-                  backgroundColor: Color(0xCCFFFFFF),
-                ),
-              ],
-            ),
-            Positioned(
-              right: 10,
-              top: 10,
-              child: Column(
-                children: [
-                  _MapButton(
-                    icon: Icons.my_location_rounded,
-                    tooltip: 'Show my live location',
-                    busy: _locating,
-                    highlighted: _me != null,
-                    onPressed: _locateMe,
-                  ),
-                  if (widget.bus != null) ...[
-                    const SizedBox(height: 8),
-                    _MapButton(
-                      icon: Icons.directions_bus_rounded,
-                      tooltip: _follow ? 'Following bus' : 'Go to bus location',
-                      highlighted: _follow,
-                      onPressed: () {
-                        setState(() => _follow = true);
-                        _controller.move(widget.bus!, _controller.camera.zoom < 14 ? 15 : _controller.camera.zoom);
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 8),
-                  _MapButton(
-                    icon: Icons.fit_screen_rounded,
-                    tooltip: 'Show whole route',
-                    onPressed: () {
-                      setState(() => _follow = false);
-                      _fitAll();
-                    },
-                  ),
-                  if (height >= 300) ...[
-                    const SizedBox(height: 8),
-                    _MapButton(icon: Icons.add_rounded, tooltip: 'Zoom in', onPressed: () => _zoom(1)),
-                    const SizedBox(height: 8),
-                    _MapButton(icon: Icons.remove_rounded, tooltip: 'Zoom out', onPressed: () => _zoom(-1)),
-                  ],
-                ],
-              ),
-            ),
-            if (fallback)
-              const Positioned(
-                left: 10,
-                top: 10,
-                right: 64,
-                child: _MapNote(text: 'Road route unavailable – dashed line joins stops in order'),
-              ),
-          ],
+        borderRadius: BorderRadius.circular(22.5),
+        child: SizedBox(
+          height: height,
+          child: mapBody,
         ),
-      ),
       ),
     );
   }
@@ -649,21 +712,71 @@ class _StopMarker extends StatelessWidget {
   Widget _buildBadge(BuildContext context) {
     final departed = stop.status == TripStopStatus.departed;
     final school = stop.isSchoolAnchor;
+    final isStart = stop.isRouteStart;
+    final isEnd = stop.isRouteEnd;
+
+    if (isStart && isEnd) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF059669), Color(0xFFDC2626)],
+            stops: [0.5, 0.5],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black38, offset: Offset(0, 1.5))],
+        ),
+        child: const Text(
+          '🚩 START · 🏁 END',
+          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 8.5, color: Colors.white, letterSpacing: 0.2),
+        ),
+      );
+    }
+
+    if (isStart) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFF059669),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black38, offset: Offset(0, 1.5))],
+        ),
+        child: const Text(
+          '🚩 START',
+          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 8.5, color: Colors.white, letterSpacing: 0.2),
+        ),
+      );
+    }
+
+    if (isEnd) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFFDC2626),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black38, offset: Offset(0, 1.5))],
+        ),
+        child: const Text(
+          '🏁 END',
+          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 8.5, color: Colors.white, letterSpacing: 0.2),
+        ),
+      );
+    }
+
     final Color fill = school
         ? AppColors.teal
         : departed
             ? AppColors.green
             : stop.isCurrent
                 ? AppColors.amber
-                : stop.isRouteStart
-                    ? AppColors.green
-                    : stop.isRouteEnd
-                        ? AppColors.brand
-                        : AppColors.brandTint;
+                : AppColors.brandTint;
     final Color border = stop.isHighlighted
         ? Colors.purple
         : (departed || stop.isCurrent || school ? Colors.white : AppColors.brand);
-    final textColor = departed || stop.isCurrent || school || stop.isRouteStart || stop.isRouteEnd
+    final textColor = departed || stop.isCurrent || school
         ? Colors.white
         : AppColors.brand;
     return Container(
@@ -671,13 +784,13 @@ class _StopMarker extends StatelessWidget {
       decoration: BoxDecoration(
         color: fill,
         shape: BoxShape.circle,
-        border: Border.all(color: border, width: stop.isHighlighted ? 4 : 3),
+        border: Border.all(color: border, width: stop.isHighlighted ? 4 : 2.5),
         boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black26)],
       ),
       child: school
           ? Icon(Icons.school, size: 16, color: textColor)
           : Text(
-              stop.badge ?? (stop.isRouteStart ? 'S' : stop.isRouteEnd ? 'E' : '${stop.sequence}'),
+              stop.badge ?? '${stop.sequence}',
               style: TextStyle(fontWeight: FontWeight.w800, fontSize: stop.badge != null && stop.badge!.length > 2 ? 10 : 12, color: textColor),
             ),
     );
@@ -689,14 +802,29 @@ class _BusMarker extends StatelessWidget {
   final bool stale;
 
   @override
-  Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          color: stale ? AppColors.slate : AppColors.brand,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 3),
-          boxShadow: const [BoxShadow(blurRadius: 6, color: Colors.black38)],
-        ),
-        child: const Icon(Icons.directions_bus, color: Colors.white, size: 22),
+  Widget build(BuildContext context) => Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: (stale ? AppColors.slate : AppColors.brand).withValues(alpha: 0.25),
+            ),
+          ),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: stale ? AppColors.slate : AppColors.brand,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2.5),
+              boxShadow: const [BoxShadow(blurRadius: 6, color: Colors.black38, offset: Offset(0, 2))],
+            ),
+            child: const Icon(Icons.directions_bus, color: Colors.white, size: 18),
+          ),
+        ],
       );
 }
 
@@ -795,16 +923,28 @@ List<MapStop> mapStopsForTrip(
   Map<String, List<String>> studentsByStop = const {},
 }) {
   final currentId = trip.currentStop?.publicId;
-  final sequences = trip.tripStops.map((e) => e.sequence);
+  final validTripStops = trip.tripStops.where((ts) => ts.stop?.hasPosition ?? false).toList();
+  final sequences = validTripStops.map((e) => e.sequence).toList();
   final maxSeq = sequences.isEmpty ? 0 : sequences.reduce((a, b) => a > b ? a : b);
+
+  final firstStop = validTripStops.isNotEmpty ? validTripStops.first.stop : null;
+  final lastStop = validTripStops.isNotEmpty ? validTripStops.last.stop : null;
+  final isStartEndLoop = firstStop != null && lastStop != null && validTripStops.length > 1 &&
+      (firstStop.publicId == lastStop.publicId ||
+       haversineMeters(firstStop.latitude!, firstStop.longitude!, lastStop.latitude!, lastStop.longitude!) < 40);
+
   final out = <MapStop>[];
-  for (final ts in trip.tripStops) {
-    if (!(ts.stop?.hasPosition ?? false)) continue;
+  for (final ts in validTripStops) {
     final isFirst = ts.sequence == 1;
     final isLast = ts.sequence == maxSeq;
+
+    // In a loop where first and last stop are identical, combine on stop #1 and avoid overlapping on last stop:
+    if (isLast && isStartEndLoop && !isFirst) {
+      continue;
+    }
+
+    final isLoopTerminal = isFirst && isStartEndLoop;
     final schoolAnchor = (trip.isMorning && isLast) || (trip.isAfternoon && isFirst);
-    final routeStart = trip.isMorning ? isFirst : schoolAnchor;
-    final routeEnd = trip.isMorning ? schoolAnchor : isLast;
     final stopId = ts.stop!.publicId;
     final count = studentCounts[stopId];
     out.add(
@@ -815,16 +955,17 @@ List<MapStop> mapStopsForTrip(
         status: ts.status,
         isCurrent: stopId == currentId,
         isSchoolAnchor: schoolAnchor,
-        isRouteStart: routeStart && !schoolAnchor,
-        isRouteEnd: routeEnd && !schoolAnchor,
+        isRouteStart: isFirst,
+        isRouteEnd: isLoopTerminal ? true : isLast,
         radiusMeters: ts.stop!.radius,
-        badge: schoolAnchor ? null : (count != null && count > 0 ? '$count' : null),
+        badge: isLoopTerminal ? 'START | END' : (schoolAnchor ? null : (count != null && count > 0 ? '$count' : null)),
         details: [
+          if (isLoopTerminal) '🚩 Route Starting Stop & 🏁 Destination (Terminal)',
+          if (!isLoopTerminal && isFirst) '🚩 Route Starting Stop',
+          if (!isLoopTerminal && isLast) '🏁 Route Destination / End Stop',
           if (schoolAnchor) 'School (${trip.isMorning ? 'morning drop-off' : 'evening pickup'})',
-          if (routeStart && !schoolAnchor) 'Route start',
-          if (routeEnd && !schoolAnchor) 'Route end',
           ?scheduledTimeLine(morning: trip.isMorning, pickupTime: ts.stop!.pickupTime, dropTime: ts.stop!.dropTime),
-          if (count != null && count > 0) '$count student${count == 1 ? '' : 's'} at this stop',
+          if (count != null && count > 0) '🎒 $count student${count == 1 ? '' : 's'} assigned to this stop',
           if (ts.stop!.address.isNotEmpty) ts.stop!.address,
           if (ts.arrivedAt != null) 'Arrived ${DateFormat.jm().format(ts.arrivedAt!)}',
           if (ts.departedAt != null) 'Departed ${DateFormat.jm().format(ts.departedAt!)}',
@@ -834,4 +975,50 @@ List<MapStop> mapStopsForTrip(
     );
   }
   return out;
+}
+
+class FullScreenTripMapScreen extends StatelessWidget {
+  const FullScreenTripMapScreen({
+    super.key,
+    required this.stops,
+    this.places = const [],
+    this.geometry,
+    this.bus,
+    this.busIsStale = false,
+    this.busLabel = 'Bus',
+    this.busDetails = const [],
+  });
+
+  final List<MapStop> stops;
+  final List<MapPlace> places;
+  final RouteGeometry? geometry;
+  final LatLng? bus;
+  final bool busIsStale;
+  final String busLabel;
+  final List<String> busDetails;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Route Map', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: TripMap(
+        stops: stops,
+        places: places,
+        geometry: geometry,
+        bus: bus,
+        busIsStale: busIsStale,
+        busLabel: busLabel,
+        busDetails: busDetails,
+        heightFraction: 1.0,
+        isFullScreen: true,
+      ),
+    );
+  }
 }

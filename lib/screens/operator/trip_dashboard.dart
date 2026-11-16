@@ -605,7 +605,7 @@ class _UpcomingStopsBar extends StatelessWidget {
             ],
           ),
           SizedBox(
-            height: 84,
+            height: 106,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: upcoming.length,
@@ -615,30 +615,74 @@ class _UpcomingStopsBar extends StatelessWidget {
                 final name = ts.stop?.name ?? 'Stop ${ts.sequence}';
                 final n = counts[ts.stop?.publicId ?? ''] ?? 0;
                 final isNext = ts.stop?.publicId == trip.currentStop?.publicId;
+                final isStart = ts.sequence == 1;
+                final isEnd = ts.sequence == (trip.tripStops.isNotEmpty ? trip.tripStops.last.sequence : -1);
+
+                Color cardBg = Colors.white;
+                Color cardBorder = AppColors.border;
+                Color badgeBg = AppColors.slate.withValues(alpha: 0.12);
+                Color badgeText = AppColors.slate;
+                String tag = '#${ts.sequence}';
+
+                if (isStart) {
+                  badgeBg = AppColors.green.withValues(alpha: 0.18);
+                  badgeText = const Color(0xFF047857);
+                  tag = '🚩 START';
+                  cardBorder = AppColors.green.withValues(alpha: 0.4);
+                } else if (isEnd) {
+                  badgeBg = const Color(0xFFFFE4E6);
+                  badgeText = const Color(0xFFBE123C);
+                  tag = '🏁 END';
+                  cardBorder = const Color(0xFFFDA4AF);
+                } else if (isNext) {
+                  cardBg = AppColors.amber.withValues(alpha: 0.12);
+                  cardBorder = AppColors.amber.withValues(alpha: 0.6);
+                  badgeBg = AppColors.amber.withValues(alpha: 0.25);
+                  badgeText = const Color(0xFFB45309);
+                  tag = '⚡ NEXT (#${ts.sequence})';
+                }
+
                 return Material(
-                  color: isNext ? AppColors.amber.withValues(alpha: 0.15) : Colors.white,
+                  color: cardBg,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    side: BorderSide(color: isNext ? AppColors.amber.withValues(alpha: 0.5) : AppColors.border),
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: cardBorder, width: isNext ? 1.5 : 1.0),
                   ),
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => ChangeNotifierProvider.value(value: controller, child: const TripStopsScreen()),
                     )),
                     child: Container(
-                      width: 140,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      width: 148,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            isNext ? 'Next' : '#${ts.sequence}',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: isNext ? AppColors.amber : AppColors.slate),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: badgeBg,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              tag,
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: badgeText),
+                            ),
                           ),
-                          Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink, height: 1.2)),
-                          Text('$n child${n == 1 ? '' : 'ren'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.slate)),
+                          Text(
+                            name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink, height: 1.15),
+                          ),
+                          Text(
+                            '$n child${n == 1 ? '' : 'ren'}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11, color: AppColors.slate),
+                          ),
                         ],
                       ),
                     ),
@@ -666,8 +710,12 @@ class _NextStopCard extends StatelessWidget {
     String? distance;
     if (busPosition != null && stop.hasPosition) {
       final m = haversineMeters(busPosition!.latitude, busPosition!.longitude, stop.latitude!, stop.longitude!);
-      final eta = etaMinutes(m, c.busLocation?.speedKmh);
-      distance = '${formatDistance(m)} · ~${eta <= 1 ? '1 min' : '$eta min'}';
+      if (m <= 80000) {
+        final eta = etaMinutes(m, c.busLocation?.speedKmh);
+        distance = '${formatDistance(m)} · ~${eta <= 1 ? '1 min' : '$eta min'}';
+      } else {
+        distance = 'Approaching route';
+      }
     }
     final n = c.rosterAtCurrentStop.length;
     return SectionCard(
