@@ -266,7 +266,11 @@ class _TripMapState extends State<TripMap> {
     final fallback = geometry?.isFallback ?? false;
     final path = (geometry != null && geometry.points.isNotEmpty)
         ? geometry.points
-        : widget.stops.map((s) => s.position).toList();
+        : widget.stops.length >= 2
+            ? widget.stops.map((s) => s.position).toList()
+            : widget.places.length >= 2
+                ? widget.places.map((p) => p.position).toList()
+                : const <LatLng>[];
     final (done, remaining) = (fallback || (geometry == null && widget.bus == null))
         ? (const <LatLng>[], path)
         : _splitPath(path);
@@ -295,24 +299,27 @@ class _TripMapState extends State<TripMap> {
               userAgentPackageName: 'com.saferoute.app',
             ),
             PolylineLayer(polylines: [
-              if (remaining.length > 1)
+              if (path.length > 1) ...[
+                // Base casing for high-contrast visibility
                 Polyline(
-                  points: remaining,
-                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.25),
+                  points: path,
+                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
                   strokeWidth: 7,
                 ),
-              if (remaining.length > 1)
+                // Remaining / active path in vibrant brand blue
                 Polyline(
-                  points: remaining,
+                  points: remaining.length > 1 ? remaining : path,
                   color: AppColors.brand,
                   strokeWidth: 4.5,
                 ),
-              if (done.length > 1)
-                Polyline(
-                  points: done,
-                  color: AppColors.green,
-                  strokeWidth: 5.5,
-                ),
+                // Completed path in emerald green
+                if (done.length > 1)
+                  Polyline(
+                    points: done,
+                    color: const Color(0xFF059669),
+                    strokeWidth: 5.5,
+                  ),
+              ],
             ]),
             if (current != null)
               CircleLayer(circles: [
@@ -345,9 +352,21 @@ class _TripMapState extends State<TripMap> {
               for (final s in widget.stops)
                 Marker(
                   point: s.position,
-                  width: (s.isRouteStart && s.isRouteEnd) ? 112 : (s.isRouteStart || s.isRouteEnd) ? 64 : (s.isHighlighted ? 46 : 34),
-                  height: (s.isRouteStart || s.isRouteEnd) ? 30 : (s.isHighlighted ? 54 : 34),
-                  alignment: s.isHighlighted ? Alignment.topCenter : Alignment.center,
+                  width: (s.isRouteStart && s.isRouteEnd)
+                      ? 112
+                      : s.isRouteEnd
+                          ? 30
+                          : (s.isRouteStart || s.isSchoolAnchor)
+                              ? 78
+                              : (s.isHighlighted ? 46 : 34),
+                  height: s.isRouteEnd
+                      ? 48
+                      : (s.isRouteStart || s.isSchoolAnchor)
+                          ? 30
+                          : (s.isHighlighted ? 54 : 34),
+                  alignment: s.isRouteEnd
+                      ? Alignment.bottomCenter
+                      : (s.isHighlighted ? Alignment.topCenter : Alignment.center),
                   child: GestureDetector(
                     onTap: () => _showDetails(
                       Icons.place,
@@ -551,6 +570,108 @@ class _TrianglePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _TrianglePainter oldDelegate) => oldDelegate.color != color;
+}
+
+class _GoogleMapsRedPinMarker extends StatelessWidget {
+  const _GoogleMapsRedPinMarker({this.label = 'END'});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CustomPaint(
+          size: const Size(26, 36),
+          painter: const _TeardropPinPainter(
+            pinColor: Color(0xFFEA4335),
+            innerCircleColor: Color(0xFFB31412),
+            strokeColor: Colors.white,
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.only(top: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          decoration: BoxDecoration(
+            color: const Color(0xFFDC2626),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: Colors.white, width: 1),
+            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 2)],
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 7.5, fontWeight: FontWeight.w900, letterSpacing: 0.2),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TeardropPinPainter extends CustomPainter {
+  const _TeardropPinPainter({
+    required this.pinColor,
+    required this.innerCircleColor,
+    required this.strokeColor,
+  });
+
+  final Color pinColor;
+  final Color innerCircleColor;
+  final Color strokeColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final r = w / 2;
+
+    // Soft drop shadow
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.28)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(w / 2, h - 1), width: w * 0.7, height: 4),
+      shadowPaint,
+    );
+
+    // Teardrop path
+    final path = ui.Path();
+    path.moveTo(w / 2, h - 2);
+    path.cubicTo(w * 0.15, h * 0.58, 0, h * 0.38, 0, r);
+    path.arcTo(
+      Rect.fromLTWH(0, 0, w, w),
+      3.14159,
+      3.14159,
+      false,
+    );
+    path.cubicTo(w, h * 0.38, w * 0.85, h * 0.58, w / 2, h - 2);
+    path.close();
+
+    // Fill pin
+    final fillPaint = Paint()
+      ..color = pinColor
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(path, fillPaint);
+
+    // White outline
+    final strokePaint = Paint()
+      ..color = strokeColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8;
+    canvas.drawPath(path, strokePaint);
+
+    // Inner dark circle (Google Maps style)
+    final circlePaint = Paint()
+      ..color = innerCircleColor
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(w / 2, r), r * 0.42, circlePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TeardropPinPainter oldDelegate) =>
+      oldDelegate.pinColor != pinColor ||
+      oldDelegate.innerCircleColor != innerCircleColor ||
+      oldDelegate.strokeColor != strokeColor;
 }
 
 class _StudentPinMarker extends StatelessWidget {
@@ -791,19 +912,7 @@ class _StopMarker extends StatelessWidget {
     }
 
     if (isEnd) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-        decoration: BoxDecoration(
-          color: const Color(0xFFDC2626),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white, width: 2),
-          boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black38, offset: Offset(0, 1.5))],
-        ),
-        child: const Text(
-          '🏁 END',
-          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 8.5, color: Colors.white, letterSpacing: 0.2),
-        ),
-      );
+      return const _GoogleMapsRedPinMarker(label: 'END');
     }
 
     final Color fill = school

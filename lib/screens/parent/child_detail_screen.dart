@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_services.dart';
@@ -8,6 +9,7 @@ import '../../core/api/api_exception.dart';
 import '../../models/student.dart';
 import '../../models/trip.dart';
 import '../../providers/parent_controller.dart';
+import '../../services/route_geometry_service.dart';
 import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
 import '../../widgets/trip_map.dart';
@@ -32,6 +34,7 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
   late final ParentController _c = context.read<ParentController>();
   late Future<List<AttendanceRecord>> _history = _c.attendanceHistory(widget.studentId);
   ParentLink? _detailLink;
+  RouteGeometry? _geometry;
 
   @override
   void initState() {
@@ -43,12 +46,32 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
     });
   }
 
+  void _fetchGeometry(ParentLink link) {
+    final route = link.pickupRoute ?? link.dropRoute;
+    final points = [
+      for (final s in route?.stops ?? const [])
+        if (s.hasPosition) LatLng(s.latitude!, s.longitude!),
+    ];
+    if (points.length < 2) {
+      if (mounted) setState(() => _geometry = null);
+      return;
+    }
+    RouteGeometryService().forStops(points).then((geom) {
+      if (mounted) setState(() => _geometry = geom);
+    }).catchError((_) {});
+  }
+
   Future<void> _refreshDetail() async {
     try {
       final link = await context.read<AppServices>().transport.childDetail(widget.studentId);
-      if (mounted) setState(() => _detailLink = link);
+      if (mounted) {
+        setState(() => _detailLink = link);
+        _fetchGeometry(link);
+      }
     } catch (_) {
       // Fall back to list payload from ParentController.
+      final fallbackLink = _c.childById(widget.studentId);
+      if (fallbackLink != null) _fetchGeometry(fallbackLink);
     }
   }
 
@@ -100,6 +123,36 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
     final s = link.student;
     final live = c.liveForChild(s.publicId);
     final places = [?schoolPlace(link.school), ...childStopPlaces(s)];
+    final activeRoute = link.pickupRoute ?? link.dropRoute;
+    final validStops = (activeRoute?.stops ?? const []).where((st) => st.hasPosition).toList();
+    final childStopId = s.pickupStop?.publicId ?? s.dropStop?.publicId;
+    final mapStops = <MapStop>[];
+    for (int i = 0; i < validStops.length; i++) {
+      final st = validStops[i];
+      final isFirst = i == 0;
+      final isLast = i == validStops.length - 1;
+      final isMorning = link.pickupRoute != null;
+      final schoolAnchor = (isMorning && isLast) || (!isMorning && isFirst);
+      final isChildStop = st.publicId == childStopId;
+      mapStops.add(MapStop(
+        position: LatLng(st.latitude!, st.longitude!),
+        sequence: st.sequence,
+        name: st.name,
+        status: TripStopStatus.pending,
+        isHighlighted: isChildStop,
+        isSchoolAnchor: schoolAnchor,
+        isRouteStart: isFirst && !schoolAnchor,
+        isRouteEnd: isLast && !schoolAnchor,
+        avatarUrl: isChildStop ? s.photo : null,
+        studentName: isChildStop ? s.fullName : null,
+        details: [
+          if (isChildStop) '${s.fullName}\'s stop',
+          if (schoolAnchor) '🏫 School Campus',
+          if (isFirst && !schoolAnchor) '🚩 Route Starting Stop',
+          if (isLast && !schoolAnchor) '🏁 Route Destination / End Stop',
+        ],
+      ));
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(s.fullName),
@@ -199,12 +252,18 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
                   )),
                 ),
               ),
-            if (places.isNotEmpty)
+            if (places.isNotEmpty || mapStops.isNotEmpty)
               SrFadeIn(
                 delay: const Duration(milliseconds: 110),
                 child: SectionCard(
                   title: 'Map',
-                  child: TripMap(places: places, followBusByDefault: false, heightFraction: 0.28),
+                  child: TripMap(
+                    stops: mapStops,
+                    geometry: _geometry,
+                    places: places,
+                    followBusByDefault: false,
+                    heightFraction: 0.28,
+                  ),
                 ),
               ),
             const SizedBox(height: 2),

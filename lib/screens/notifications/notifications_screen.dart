@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../theme/sr_tokens.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../theme/sr_tokens.dart';
 
 import '../../app_services.dart';
 import '../../models/app_notification.dart';
@@ -655,6 +656,91 @@ class _NotificationTile extends StatelessWidget {
                       height: 1.35,
                     ),
                   ),
+                ),
+
+                // Emergency & Location Action Shortcuts
+                Builder(
+                  builder: (context) {
+                    final lat = item.data['latitude'];
+                    final lng = item.data['longitude'];
+                    final gUrl = item.data['google_maps_url'] ?? ((lat != null && lng != null) ? 'https://www.google.com/maps?q=$lat,$lng' : null);
+                    final tripId = item.data['trip_id'];
+
+                    if (gUrl == null && tripId == null && !emergency) return const SizedBox.shrink();
+
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 26, top: 10),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          if (gUrl != null)
+                            InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () async {
+                                final uri = Uri.parse(gUrl);
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF2F2),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.location_on_rounded, size: 14, color: Color(0xFFDC2626)),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Open in Google Maps',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFFDC2626),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          if (tripId != null)
+                            InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () {
+                                context.read<AppServices>().deepLinks.open({...item.data, 'type': item.type});
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.brandTint,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.brand.withValues(alpha: 0.35)),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.map_rounded, size: 14, color: AppColors.brand),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Live Route & Bus',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.brand,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 10),
