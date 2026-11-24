@@ -25,6 +25,7 @@ class SchoolSettings {
   const SchoolSettings({
     this.allowManualStopOverride = false,
     this.enableAutoDetect = true,
+    this.enableQrCodeAttendance = false,
     this.gpsTrackingEnabled = true,
     this.gpsTrackingIntervalSeconds = 15,
     this.allowParentDriverContact = false,
@@ -32,6 +33,7 @@ class SchoolSettings {
 
   final bool allowManualStopOverride;
   final bool enableAutoDetect;
+  final bool enableQrCodeAttendance;
   final bool gpsTrackingEnabled;
   final int gpsTrackingIntervalSeconds;
   final bool allowParentDriverContact;
@@ -39,6 +41,7 @@ class SchoolSettings {
   factory SchoolSettings.fromJson(Map<String, dynamic> json) => SchoolSettings(
         allowManualStopOverride: json['allow_manual_stop_override'] == true,
         enableAutoDetect: json['enable_auto_detect'] != false,
+        enableQrCodeAttendance: json['enable_qr_code_attendance'] == true,
         gpsTrackingEnabled: json['gps_tracking_enabled'] != false,
         gpsTrackingIntervalSeconds: asInt(json['gps_tracking_interval_seconds']) ?? 15,
         allowParentDriverContact: json['allow_parent_driver_contact'] == true,

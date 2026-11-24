@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/student.dart';
@@ -6,11 +7,10 @@ import '../../models/trip.dart';
 import '../../providers/operator_trip_controller.dart';
 import '../../widgets/sr_animations.dart';
 import '../../widgets/state_views.dart';
-import 'trip_widgets.dart';
 
 const _schoolColor = AppColors.teal;
 
-/// All route stops with student counts — opened from the trip map header.
+/// All route stops with student counts and arrived/departed times.
 class TripStopsScreen extends StatelessWidget {
   const TripStopsScreen({super.key});
 
@@ -38,67 +38,122 @@ class TripStopsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          SrFadeIn(
-            delay: const Duration(milliseconds: 60),
-            child: Card(
-              margin: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: StopTimeline(trip: trip),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
           for (var i = 0; i < trip.tripStops.length; i++)
             Builder(builder: (context) {
               final ts = trip.tripStops[i];
               final n = counts[ts.stop?.publicId ?? ''] ?? 0;
+              final timing = _formatTiming(ts, trip);
+
               return SrFadeIn(
-                delay: Duration(milliseconds: 100 + (i < 8 ? i : 8) * 40),
+                delay: Duration(milliseconds: 60 + (i < 8 ? i : 8) * 35),
                 offset: 14,
                 child: Card(
                   margin: const EdgeInsets.only(bottom: 12),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 64),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(color: _stopColor(trip, ts.sequence, ts.status), borderRadius: BorderRadius.circular(13)),
-                            child: Text('${ts.sequence}', style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white)),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    side: BorderSide(
+                      color: ts.status == TripStopStatus.departed
+                          ? AppColors.green.withValues(alpha: 0.3)
+                          : ts.status == TripStopStatus.arrived
+                              ? AppColors.amber.withValues(alpha: 0.4)
+                              : AppColors.border,
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 38,
+                              height: 38,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: _stopColor(trip, ts.sequence, ts.status),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${ts.sequence}',
+                                style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 15),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    ts.stop?.name ?? 'Stop ${ts.sequence}',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.ink,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                  if (ts.stop?.address != null && ts.stop!.address.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        ts.stop!.address,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 11.5, color: AppColors.slate),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _statusPill(ts.status),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  ts.stop?.name ?? 'Stop ${ts.sequence}',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink, letterSpacing: -0.2),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.schedule_rounded, size: 14, color: AppColors.slate),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    timing ?? 'Pending schedule',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: ts.departedAt != null ? FontWeight.w700 : FontWeight.w500,
+                                      color: ts.departedAt != null ? AppColors.green : AppColors.ink,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.brand.withValues(alpha: 0.10),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(TripStopStatus.label(ts.status), style: const TextStyle(fontSize: 13, color: AppColors.slate)),
-                              ],
-                            ),
+                                child: Text(
+                                  '$n student${n == 1 ? '' : 's'}',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.brand),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(color: AppColors.brand.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-                            child: Text(
-                              '$n student${n == 1 ? '' : 's'}',
-                              maxLines: 1,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.brand),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -109,8 +164,55 @@ class TripStopsScreen extends StatelessWidget {
     );
   }
 
+  Widget _statusPill(String status) {
+    final color = switch (status) {
+      TripStopStatus.departed => const Color(0xFF059669),
+      TripStopStatus.arrived => const Color(0xFFD97706),
+      _ => const Color(0xFF64748B),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            TripStopStatus.label(status),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _formatTiming(TripStop ts, Trip trip) {
+    final parts = <String>[];
+    if (ts.arrivedAt != null) {
+      parts.add('Arrived ${DateFormat.jm().format(ts.arrivedAt!)}');
+    }
+    if (ts.departedAt != null) {
+      parts.add('Departed ${DateFormat.jm().format(ts.departedAt!)}');
+    }
+    if (parts.isNotEmpty) return parts.join(' · ');
+    final sched = trip.isMorning ? ts.stop?.pickupTime : ts.stop?.dropTime;
+    if (sched != null && sched.isNotEmpty) {
+      return 'Scheduled: $sched';
+    }
+    return null;
+  }
+
   Color _stopColor(Trip trip, int sequence, String status) {
     if (status == TripStopStatus.departed) return AppColors.green;
+    if (status == TripStopStatus.arrived) return AppColors.amber;
     final last = trip.tripStops.isEmpty ? 0 : trip.tripStops.map((e) => e.sequence).reduce((a, b) => a > b ? a : b);
     if (trip.isMorning && sequence == last) return _schoolColor;
     if (trip.isAfternoon && sequence == 1) return _schoolColor;

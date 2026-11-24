@@ -353,16 +353,16 @@ class _TripMapState extends State<TripMap> {
                 Marker(
                   point: s.position,
                   width: (s.isRouteStart && s.isRouteEnd)
-                      ? 112
+                      ? 36
                       : s.isRouteEnd
-                          ? 30
+                          ? 28
                           : (s.isRouteStart || s.isSchoolAnchor)
-                              ? 78
+                              ? 36
                               : (s.isHighlighted ? 46 : 34),
                   height: s.isRouteEnd
-                      ? 48
+                      ? 38
                       : (s.isRouteStart || s.isSchoolAnchor)
-                          ? 30
+                          ? 36
                           : (s.isHighlighted ? 54 : 34),
                   alignment: s.isRouteEnd
                       ? Alignment.bottomCenter
@@ -573,37 +573,17 @@ class _TrianglePainter extends CustomPainter {
 }
 
 class _GoogleMapsRedPinMarker extends StatelessWidget {
-  const _GoogleMapsRedPinMarker({this.label = 'END'});
-  final String label;
+  const _GoogleMapsRedPinMarker();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CustomPaint(
-          size: const Size(26, 36),
-          painter: const _TeardropPinPainter(
-            pinColor: Color(0xFFEA4335),
-            innerCircleColor: Color(0xFFB31412),
-            strokeColor: Colors.white,
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.only(top: 1),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-          decoration: BoxDecoration(
-            color: const Color(0xFFDC2626),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: Colors.white, width: 1),
-            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 2)],
-          ),
-          child: Text(
-            label,
-            style: const TextStyle(color: Colors.white, fontSize: 7.5, fontWeight: FontWeight.w900, letterSpacing: 0.2),
-          ),
-        ),
-      ],
+    return const CustomPaint(
+      size: Size(26, 36),
+      painter: _TeardropPinPainter(
+        pinColor: Color(0xFFEA4335),
+        innerCircleColor: Color(0xFFB31412),
+        strokeColor: Colors.white,
+      ),
     );
   }
 }
@@ -855,64 +835,48 @@ class _StopMarker extends StatelessWidget {
 
     if (isStart && isEnd) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF059669), Color(0xFFDC2626)],
-            stops: [0.5, 0.5],
-          ),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white, width: 2),
+          color: school ? const Color(0xFF0D9488) : const Color(0xFF059669),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2.5),
           boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black38, offset: Offset(0, 1.5))],
         ),
-        child: const Text(
-          '🚩 START · 🏁 END',
-          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 8.5, color: Colors.white, letterSpacing: 0.2),
-        ),
+        child: Icon(school ? Icons.school_rounded : Icons.flag_rounded, color: Colors.white, size: 20),
       );
     }
 
     if (school) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
           color: const Color(0xFF0D9488),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white, width: 2),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2.5),
           boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black38, offset: Offset(0, 1.5))],
         ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.school_rounded, color: Colors.white, size: 12),
-            SizedBox(width: 3),
-            Text(
-              'SCHOOL',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 8.5, color: Colors.white, letterSpacing: 0.2),
-            ),
-          ],
-        ),
+        child: const Icon(Icons.school_rounded, color: Colors.white, size: 20),
       );
     }
 
     if (isStart) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
           color: const Color(0xFF059669),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white, width: 2),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2.5),
           boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black38, offset: Offset(0, 1.5))],
         ),
-        child: const Text(
-          '🚩 START',
-          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 8.5, color: Colors.white, letterSpacing: 0.2),
-        ),
+        child: const Icon(Icons.flag_rounded, color: Colors.white, size: 20),
       );
     }
 
     if (isEnd) {
-      return const _GoogleMapsRedPinMarker(label: 'END');
+      return const _GoogleMapsRedPinMarker();
     }
 
     final Color fill = school

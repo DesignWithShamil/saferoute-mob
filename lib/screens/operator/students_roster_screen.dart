@@ -142,44 +142,46 @@ class _StudentsRosterScreenState extends State<StudentsRosterScreen> {
               onSubmitted: _lookupStudent,
             ),
           ),
-          const SizedBox(height: 12),
-          SrFadeIn(
-            delay: const Duration(milliseconds: 60),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48), padding: const EdgeInsets.symmetric(horizontal: 8)),
-                    onPressed: () async {
-                      final token = await Navigator.of(context).push<String>(MaterialPageRoute(
-                        builder: (_) => const QrCaptureScreen(title: 'Scan to look up student'),
-                      ));
-                      if (token != null && token.isNotEmpty && mounted) {
-                        _query.text = token;
-                        await _lookupStudent(token);
-                      }
-                    },
-                    icon: const Icon(Icons.qr_code_scanner, size: 20),
-                    label: const Text('Scan QR', maxLines: 1, overflow: TextOverflow.ellipsis),
+          if (context.watch<OperatorTripController>().settings.enableQrCodeAttendance) ...[
+            const SizedBox(height: 12),
+            SrFadeIn(
+              delay: const Duration(milliseconds: 60),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48), padding: const EdgeInsets.symmetric(horizontal: 8)),
+                      onPressed: () async {
+                        final token = await Navigator.of(context).push<String>(MaterialPageRoute(
+                          builder: (_) => const QrCaptureScreen(title: 'Scan to look up student'),
+                        ));
+                        if (token != null && token.isNotEmpty && mounted) {
+                          _query.text = token;
+                          await _lookupStudent(token);
+                        }
+                      },
+                      icon: const Icon(Icons.qr_code_scanner, size: 20),
+                      label: const Text('Scan QR', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48), padding: const EdgeInsets.symmetric(horizontal: 8)),
-                    onPressed: () {
-                      final c = context.read<OperatorTripController>();
-                      Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => ChangeNotifierProvider.value(value: c, child: const QrScanScreen()),
-                      ));
-                    },
-                    icon: const Icon(Icons.fact_check_outlined, size: 20),
-                    label: const Text('Mark attendance', maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48), padding: const EdgeInsets.symmetric(horizontal: 8)),
+                      onPressed: () {
+                        final c = context.read<OperatorTripController>();
+                        Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => ChangeNotifierProvider.value(value: c, child: const QrScanScreen()),
+                        ));
+                      },
+                      icon: const Icon(Icons.fact_check_outlined, size: 20),
+                      label: const Text('Mark attendance', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeOutCubic,

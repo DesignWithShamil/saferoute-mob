@@ -449,30 +449,6 @@ class _ActiveTrip extends StatelessWidget {
                   if (!isDriver && c.busLocation != null) 'Updated ${formatAge(c.busLocation!.age)}',
                 ],
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => ChangeNotifierProvider.value(value: c, child: const TripStopsScreen()),
-                      )),
-                      icon: const Icon(Icons.signpost_outlined, size: 20),
-                      label: const Text('All stops'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => ChangeNotifierProvider.value(value: c, child: const TripRosterScreen()),
-                      )),
-                      icon: const Icon(Icons.groups_outlined, size: 20),
-                      label: const Text('Full roster'),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -521,14 +497,16 @@ class _ActiveTrip extends StatelessWidget {
             ),
           ),
         _TripControls(trip: trip),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => ChangeNotifierProvider.value(value: c, child: const QrScanScreen()),
-          )),
-          icon: const Icon(Icons.qr_code_scanner),
-          label: const Text('Scan student QR'),
-        ),
+        if (c.settings.enableQrCodeAttendance) ...[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => ChangeNotifierProvider.value(value: c, child: const QrScanScreen()),
+            )),
+            icon: const Icon(Icons.qr_code_scanner),
+            label: const Text('Scan student QR'),
+          ),
+        ],
         const SizedBox(height: 8),
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
@@ -541,13 +519,6 @@ class _ActiveTrip extends StatelessWidget {
           label: Text(
             trip.isMorning ? 'Send delay alert (not picked up)' : 'Send delay alert (not dropped)',
           ),
-        ),
-        const SizedBox(height: 8),
-        FilledButton.icon(
-          style: FilledButton.styleFrom(backgroundColor: AppColors.red, minimumSize: const Size.fromHeight(52)),
-          onPressed: c.acting ? null : () => showSosFlow(context),
-          icon: const Icon(Icons.sos),
-          label: const Text('SOS – EMERGENCY', style: TextStyle(fontWeight: FontWeight.w800)),
         ),
       ],
     );
