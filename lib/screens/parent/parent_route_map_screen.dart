@@ -36,9 +36,16 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
 
   void _fetchGeometry(ParentLink link, bool morning) {
     final route = morning ? link.pickupRoute : link.dropRoute;
-    final points = [
+    final isReversed = !morning && (route?.routeType == 'BOTH' || route?.routeType == 'AFTERNOON');
+    var rawStops = [
       for (final s in route?.stops ?? const [])
-        if (s.hasPosition) LatLng(s.latitude!, s.longitude!),
+        if (s.hasPosition) s,
+    ];
+    if (isReversed) {
+      rawStops = rawStops.reversed.toList();
+    }
+    final points = [
+      for (final s in rawStops) LatLng(s.latitude!, s.longitude!),
     ];
     if (points.length < 2) {
       if (mounted) setState(() => _geometry = null);
@@ -106,18 +113,21 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
     final route = _morning ? link.pickupRoute : link.dropRoute;
     final student = link.student;
     final highlightId = _morning ? student.pickupStop?.publicId : student.dropStop?.publicId;
-    final validRouteStops = (route?.stops ?? const []).where((s) => s.hasPosition).toList();
+    final isReversed = !_morning && (route?.routeType == 'BOTH' || route?.routeType == 'AFTERNOON');
+    final rawRouteStops = (route?.stops ?? const []).where((s) => s.hasPosition).toList();
+    final validRouteStops = isReversed ? rawRouteStops.reversed.toList() : rawRouteStops;
+
     final stops = <MapStop>[];
     for (int i = 0; i < validRouteStops.length; i++) {
       final s = validRouteStops[i];
       final isFirst = i == 0;
       final isLast = i == validRouteStops.length - 1;
-      final schoolAnchor = (_morning && isLast) || (!_morning && isFirst);
+      final schoolAnchor = _morning ? isLast : isFirst;
       final isChildStop = s.publicId == highlightId;
       stops.add(
         MapStop(
           position: LatLng(s.latitude!, s.longitude!),
-          sequence: s.sequence,
+          sequence: i + 1,
           name: s.name,
           status: TripStopStatus.pending,
           isHighlighted: isChildStop,
@@ -130,7 +140,7 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
             if (isChildStop) '${student.fullName}\'s stop',
             if (schoolAnchor) '🏫 School Campus',
             if (isFirst && !schoolAnchor) '🚩 Route Starting Stop',
-            if (isLast && !schoolAnchor) '🏁 Route End Stop',
+            if (isLast && !schoolAnchor) '🏁 Route Destination Stop',
             ?scheduledTimeLine(morning: _morning, pickupTime: s.pickupTime, dropTime: s.dropTime),
           ],
         ),
@@ -193,36 +203,50 @@ class _ParentRouteMapScreenState extends State<ParentRouteMapScreen> {
             TripMap(
               stops: stops,
               geometry: _geometry,
-              places: [?schoolPlace(link.school), ...childStopPlaces(student, skipStopIds: {for (final s in route.stops) s.publicId})],
+              places: [
+                if (!stops.any((s) => s.isSchoolAnchor)) ?schoolPlace(link.school),
+                ...childStopPlaces(student, skipStopIds: {for (final s in route.stops) s.publicId}),
+              ],
               followBusByDefault: false,
               heightFraction: 0.35,
             ),
             const SizedBox(height: 12),
             SectionCard(
-              title: 'Stops',
+              title: _morning ? 'Morning Pickup Stops' : 'Evening Drop Stops',
               child: Column(
                 children: [
-                  for (final s in route.stops)
-                    ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                        radius: 15,
-                        backgroundColor: (s.publicId == highlightId ? AppColors.green : AppColors.brand).withValues(alpha: 0.12),
-                        foregroundColor: s.publicId == highlightId ? AppColors.green : AppColors.brand,
-                        child: Text('${s.sequence}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
-                      ),
-                      title: Text(
-                        s.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontWeight: s.publicId == highlightId ? FontWeight.w800 : FontWeight.w600),
-                      ),
-                      subtitle: Text(_morning ? (s.pickupTime ?? '') : (s.dropTime ?? '')),
-                      trailing: s.publicId == highlightId
-                          ? const StatusChip(label: 'Your stop', color: AppColors.green)
-                          : null,
-                    ),
+                  for (int i = 0; i < validRouteStops.length; i++)
+                    (() {
+                      final s = validRouteStops[i];
+                      final isChildStop = s.publicId == highlightId;
+                      final isFirst = i == 0;
+                      final isLast = i == validRouteStops.length - 1;
+                      final iconLabel = isFirst
+                          ? (_morning ? '🚩 1' : '🏫 1')
+                          : isLast
+                              ? '🏁 ${i + 1}'
+                              : '${i + 1}';
+                      return ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          radius: 15,
+                          backgroundColor: (isChildStop ? AppColors.green : AppColors.brand).withValues(alpha: 0.12),
+                          foregroundColor: isChildStop ? AppColors.green : AppColors.brand,
+                          child: Text(iconLabel, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800)),
+                        ),
+                        title: Text(
+                          s.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontWeight: isChildStop ? FontWeight.w800 : FontWeight.w600),
+                        ),
+                        subtitle: Text(_morning ? (s.pickupTime != null ? 'Pickup: ${s.pickupTime}' : '') : (s.dropTime != null ? 'Drop: ${s.dropTime}' : '')),
+                        trailing: isChildStop
+                            ? const StatusChip(label: 'Your stop', color: AppColors.green)
+                            : null,
+                      );
+                    })(),
                 ],
               ),
             ),
